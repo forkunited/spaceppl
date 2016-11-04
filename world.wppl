@@ -1,0 +1,14 @@
+var discretePointWorldUniformPrior = function(length, height, pointRefs) {
+	return function() {
+		var points = map(function(pointRef) { return [randomInteger(length), randomInteger(height)] }, pointRefs);
+		return _.object(pointRefs, points);
+	}
+}
+
+var DiscretePointWorldUniformPrior = function(length, height, pointRefs) {
+	var prior = discretePointWorldUniformPrior(length, height, pointRefs);
+	return Infer({ method : 'enumerate' }, function() {
+		return prior();
+	})
+}
+

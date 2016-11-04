@@ -1,0 +1,22 @@
+{
+  "name": "spaceppl",
+  "version": "1.0.0",
+  "description": "Spatial language language learning in webppl",
+  "main": "library.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "webppl": {
+    "wppl" : ["learn.wppl", "world.wppl", "rsa.wppl"]
+  },
+  "author": "Bill McDowell",
+  "dependencies": {
+    "adnn": "^1.1.6",
+    "underscore": "^1.8.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forkunited/spaceppl.git"
+  },
+  "homepage": "https://github.com/forkunited/spaceppl"
+}

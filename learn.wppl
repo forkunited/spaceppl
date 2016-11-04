@@ -1,0 +1,87 @@
+var makeData = function(distribution, possibleInputs, samplesPerInput) {
+	return _.flatten(
+		map(function(input) { 
+			var dist = distribution(input);
+			return repeat(samplesPerInput, function() {
+				return {input: input, output: sample(dist)}
+			});
+		}, 
+		possibleInputs), 
+		/* shallow */ true);
+} 
+
+var train = function(model, parameterPrior, data, iterations) {
+	var trainingObj = function() {
+		var modelInstance = model(parameterPrior());
+		
+		mapData({ data: data }, function(datum) {
+			var dist = modelInstance(datum.input);
+			observe(dist, datum.output);
+		});
+
+		return modelInstance;
+	};
+
+	return Optimize(trainingObj,
+			{
+				steps: iterations,
+				estimator : { ELBO : { samples : 1 }},
+			});
+}
+
+var makeVector = function(arr) {
+	return Tensor([arr.length,1], arr);
+}
+
+var nnparam = function (a, b) {
+	return param({ dims: [a, b], mu: 0, sigma: 0.1});
+};
+
+
+var sampleMatrixGaussian = function (dims, mean, variance, guide_mean) {
+	var length = dims[0] * dims[1]
+	var g = sample(DiagCovGaussian({ mu: Vector(repeat(length, constF(mean))), sigma: Vector(repeat(length, constF(variance))) }),
+	{ guide: DiagCovGaussian({ mu: T.reshape(guide_mean, [length, 1]), sigma: Vector(repeat(length, constF(0.001))) }) })
+	return T.reshape(g, dims)
+}
+
+var sampleScalarGaussian = function (mean, variance, name) {
+	return sample(Gaussian({ mu: mean, sigma: variance }),
+	{ guide: Gaussian({ mu: param({ mu: mean, name: name }), sigma: 0.001 }) });
+}
+
+var nnParameterPrior = function (hiddenSize, inputSize) {
+	var W0_var = nnparam(hiddenSize, inputSize)
+	var W1_var = nnparam(1, hiddenSize)
+	var b0_var = nnparam(hiddenSize, 1)
+	var b1_var = nnparam(1, 1)
+
+	var W0 = sampleMatrixGaussian([hiddenSize, inputSize], 0, 10, W0_var)
+	var W1 = sampleMatrixGaussian([1, hiddenSize], 0, 10, W1_var)
+	var b0 = sampleMatrixGaussian([hiddenSize, 1], 0, 10, b0_var)
+	var b1 = sampleMatrixGaussian([1, 1], 0, 10, b1_var)
+
+	return { W: [W0, W1], b: [b0, b1] };
+}
+
+var gaussianNN = function(hiddenSize, inputSize) {
+	var params = nnParameterPrior(hiddenSize, inputSize);
+	var W = params.W;
+	var b = params.b;
+
+	return function(input) {
+		console.log("Input")
+		console.log(input)
+		var inputVector = makeVector(input);
+		var h = T.tanh(T.add(T.dot(W[0], inputVector), b[0]));
+		var output = T.add(T.dot(W[1], h), b[1]);
+		
+		//var inputAsArray = input.toFlatArray();
+		// console.log("height: " + inputAsArray[0] + 
+		//     ", weight: " + inputAsArray[1] +
+		//     ", output: " + T.sumreduce(ad.value(output)));
+		
+		return T.sumreduce(output)
+	};
+};
+

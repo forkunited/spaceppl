@@ -1,0 +1,46 @@
+var makeRSA = function(params) {
+	var memApply = mem(function(utterance, world, parameters) {
+			return spaceppl.semantics.apply(utterance, world, parameters);	
+		});
+
+	var utterancePrior = params.utterancePrior;
+	var worldPrior = params.worldPrior;
+	var parametersPrior = params.parametersPrior;
+
+	var L_0 = mem(function(utterance, parameters) {
+			return Infer({ method : 'enumerate'}, function() {
+				var world = worldPrior();
+				var truthValue = memApply(utterance, world, parameters);
+				factor(Math.log(truthValue));
+				return world;
+			})
+		});
+
+		
+	var S = mem(function(world, parameters) {
+			return Infer({ method : 'enumerate'}, function() {
+				var utterance = utterancePrior();
+				var L_0_up = L_0(utterance, parameters);
+				factor(L_0_up.score(world));
+				return utterance;
+			})
+		});
+
+
+	var L = mem(function(utterance) {
+			return Infer({ method: 'enumerate' }, function() {
+				var parameters = parametersPrior();
+				var world = worldPrior();
+				var S_wp = S(world, parameters);
+				factor(S_wp.score(utterance));
+				return world; 
+			})
+		});
+
+	return L
+	/*return {
+		L_0 : L_0,
+		S : S,
+		L : L
+	}*/
+}

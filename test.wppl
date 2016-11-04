@@ -1,0 +1,13 @@
+// webppl rsa.wppl --require .
+//var x = rsa.cartesianProductMap((function(x,y) {x+y}), [1,2], [3,4]) 
+//near();
+//spaceppl.space.near();
+//spaceppl.apply("", "", "");
+
+makeDiscretePointWorldUniformPrior(8,8,["p1","p2"]);
+
+//var f = function() { return "hi" }
+//var x = rsa.x()
+//var c = cartesianProductMap((function(x,y) {x+y}), [1,2], [3,4]) 
+//display(c)
+//f()
