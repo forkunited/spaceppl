@@ -4,7 +4,15 @@
 //spaceppl.space.near();
 //spaceppl.apply("", "", "");
 
-makeDiscretePointWorldUniformPrior(8,8,["p1","p2"]);
+//makeDiscretePointWorldUniformPrior(8,8,["p1","p2"]);
+
+var worldPrior = discretePointWorldUniformPriorNoReplacement(3,2, ["p1","p2","p3"], true);
+
+
+Infer({method : 'enumerate' }, worldPrior);
+
+//shuffle(4);
+
 
 //var f = function() { return "hi" }
 //var x = rsa.x()

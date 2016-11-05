@@ -16,17 +16,36 @@ var near = function(ref1, ref2) {
 	};
 }
 
-//var makePointVector = function(points) {
-//	var pointVector = _.flatten(points);
-//	return new Tensor([pointVector.length,1], pointVector);
-//}
+var makePointVector = function(points) {
+	var pointVector = _.flatten(points);
+	return new Tensor([pointVector.length,1]).fromFlatArray(pointVector);
+}
+
+var network = function(point1, point2, params) {
+	//console.log("Input");
+	//console.log(input)
+	
+	var inputVector = makePointVector([point1,point2]);
+	var h = T.tanh(T.add(T.dot(params.W[0], inputVector), params.b[0]));
+	var output = T.add(T.dot(params.W[1], h), params.b[1]);
+
+	//var inputAsArray = input.toFlatArray();
+	// console.log("height: " + inputAsArray[0] +
+	//     ", weight: " + inputAsArray[1] +
+	//     ", output: " + T.sumreduce(ad.value(output)));
+	//
+	//console.log("points " + point1 + " " + point2);
+	//console.log("input " + inputVector);
+	//console.log("output " + output);
+	return T.sumreduce(output)
+	
+}
 
 var nearPointsNetwork = function(point1, point2, parameters) {
-	var pointVector = _.flatten([point1,point2]);//makePointVector([point1,point2]);
-	console.log("Argument");
-	console.log(pointVector);
-	var measurement = parameters.nearNetwork(1);//pointVector);
-	console.log("Finished Measure");
+	//var pointVector = _.flatten([point1,point2]);//makePointVector([point1,point2]);
+	//console.log("Argument");
+	//console.log(pointVector);
+	var measurement = network(point1, point2, parameters.nearPointsNetworkParameters);
 	return ad.scalar.sigmoid(ad.scalar.mul(1.0/parameters.nearVagueness, ad.scalar.sub(measurement, parameters.nearThreshold)));
 }
 

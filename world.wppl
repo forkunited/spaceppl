@@ -12,3 +12,51 @@ var DiscretePointWorldUniformPrior = function(length, height, pointRefs) {
 	})
 }
 
+var discretePointWorldUniformPriorNoReplacementInit = function(length, height, pointRefs, ordered) {
+	return function() {
+		var subset = ordered ?
+			sort(randomSubset(length*height, pointRefs.length))
+			: randomSubset(length*height, pointRefs.length)
+		var points = map(function(pointIndex) { return [Math.floor(pointIndex/length), pointIndex % length] }, subset);
+		return _.object(pointRefs, points);
+	}
+}
+
+var DiscretePointWorldUniformPriorNoReplacement = function(length, height, pointRefs, ordered) {
+	var prior = discretePointWorldUniformPriorNoReplacementInit(length, height, pointRefs, ordered);
+	return Infer({ method : 'enumerate' }, function() {
+		return prior();
+	})
+}
+
+var discretePointWorldUniformPriorNoReplacement = function(length, height, pointRefs, ordered) {
+	var dist = DiscretePointWorldUniformPriorNoReplacement(length, height, pointRefs, ordered);
+	return function() {
+		return sample(dist);
+	}
+}
+
+var randomSubset = function(n, k) {
+	var perm = shuffle(n);
+	return _.initial(perm, n-k);
+}
+
+var shuffle = function(n) {
+	var perm = _.range(n);	
+	return shuffleHelper(n-1, perm);
+}
+
+var shuffleHelper = function(i, perm) {
+	if (i == 0)
+		return perm
+	else {
+		var temp = perm[i];
+		var swap = randomInteger(i+1);
+		return shuffleHelper(i - 1, mapIndexed(function(index, element) { 
+							return index == i ? perm[swap] : 
+								(index == swap ? temp : 
+									perm[index]) 
+							}, perm))
+	}
+}
+

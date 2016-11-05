@@ -1,7 +1,13 @@
-var pointRefs = ["p1","p2","p3"];
+var trainingSamplesPerUtterance = 100;
+var trainingIterations = 3000;
+var trainingGradientSamples = 1;
+var pointRefs = ["p1","p2","p3", "p4", "p5", "p6"];
+var gridWidth = 3;
+var gridHeight = 3;
 var pointRefMentions = map(function(p) { return "'" + p + "'" }, pointRefs);
 
-var worldPrior = discretePointWorldUniformPrior(3,2,pointRefs);
+var worldPrior = discretePointWorldUniformPriorNoReplacement(gridWidth,gridHeight, pointRefs, true);
+//discretePointWorldUniformPrior(gridWidth,gridHeight,pointRefs);
 
 var utterances = spaceppl.semantics.makeUtterances([["spaceppl.space.near"], [_.first(pointRefMentions)], _.rest(pointRefMentions)]);
 var utterancePrior = function() { return uniformDraw(utterances) }; 
@@ -20,7 +26,7 @@ var trueParametersPrior = function() {
 };
 
 var networkParametersPrior = function() { 
-	var nearNetwork = gaussianNN(4,4); // Hidden size, input size (input is 4 for two 2d points)
+	var nearPointsNetworkParameters = nnGaussianParameterPrior(2,4); // Hidden size, input size (input is 4 for two 2d points)
 
 	return { worldPrior : worldPrior, 
 		 utterancePrior : utterancePrior,
@@ -29,7 +35,7 @@ var networkParametersPrior = function() {
 				nearThreshold : uniformDraw([1,1.2]), 
 				nearVagueness : .05, 
 				nearFn : spaceppl.space.nearPointsNetwork,
-				nearNetwork : nearNetwork 
+				nearPointsNetworkParameters : nearPointsNetworkParameters 
 			}
 		}
 	}
@@ -38,25 +44,20 @@ var networkParametersPrior = function() {
 var groundTruthListener = makeRSA(trueParametersPrior());
 
 display("Making data...");
-var trainData = makeData(groundTruthListener, utterances, 20/*samplesPerInput*/);
+var trainData = makeData(groundTruthListener, utterances, trainingSamplesPerUtterance);
 
 display("Training model...");
-var trainedModel = train(makeRSA, networkParametersPrior, trainData, 20/*iterations*/);
+var trainingResults = train(makeTrainingObj(makeRSA, networkParametersPrior, trainData), trainingIterations, trainingGradientSamples);
 
-trainedModel
 
-//groundTruthListener("spaceppl.space.near('p1','p2')");
+var trainedListener = sample(SampleGuide(makeTrainingObj(makeRSA, networkParametersPrior), { params: trainingResults }));
 
-//var world = sample(worldPrior);
-//display(utterances[0]);
-//display(world);
-//display(world["p1"]);
 
-//var n = spaceppl.space.near("p1","p1");
-//display(n);
-//display(n(world, { nearThreshold : 1, nearVagueness : .05 }));
-
-//display((spaceppl.space.near("p1","p1"))(world, { nearThreshold: 1, nearVagueness:.05 }));
-
-//display(spaceppl.semantics.apply(utterances[0], world, { nearThreshold: 1, nearVagueness: .05}));
-
+display("World prior")
+display(Infer({method : 'enumerate'}, worldPrior));
+display("Training utterances");
+display(utterances);
+display("Ground truth distribution near(p1,p2");
+display(groundTruthListener("spaceppl.space.near('p1','p2')"));
+display("Learned distribution near(p1,p2)");
+display(trainedListener("spaceppl.space.near('p1','p2')"));

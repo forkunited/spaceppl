@@ -10,22 +10,26 @@ var makeData = function(distribution, possibleInputs, samplesPerInput) {
 		/* shallow */ true);
 } 
 
-var train = function(model, parameterPrior, data, iterations) {
-	var trainingObj = function() {
+var makeTrainingObj = function(model, parameterPrior, data) {
+	return function() {
 		var modelInstance = model(parameterPrior());
 		
-		mapData({ data: data }, function(datum) {
-			var dist = modelInstance(datum.input);
-			observe(dist, datum.output);
-		});
+		if (data) {
+			mapData({ data: data }, function(datum) {
+				var dist = modelInstance(datum.input);
+				observe(dist, datum.output);
+			});
+		}
 
 		return modelInstance;
-	};
+	}
+}
 
+var train = function(trainingObj, iterations, gradientSamples) {
 	return Optimize(trainingObj,
 			{
 				steps: iterations,
-				estimator : { ELBO : { samples : 1 }},
+				estimator : { ELBO : { samples : gradientSamples }},
 			});
 }
 
@@ -50,7 +54,7 @@ var sampleScalarGaussian = function (mean, variance, name) {
 	{ guide: Gaussian({ mu: param({ mu: mean, name: name }), sigma: 0.001 }) });
 }
 
-var nnParameterPrior = function (hiddenSize, inputSize) {
+var nnGaussianParameterPrior = function (hiddenSize, inputSize) {
 	var W0_var = nnparam(hiddenSize, inputSize)
 	var W1_var = nnparam(1, hiddenSize)
 	var b0_var = nnparam(hiddenSize, 1)
@@ -64,24 +68,24 @@ var nnParameterPrior = function (hiddenSize, inputSize) {
 	return { W: [W0, W1], b: [b0, b1] };
 }
 
-var gaussianNN = function(hiddenSize, inputSize) {
-	var params = nnParameterPrior(hiddenSize, inputSize);
-	var W = params.W;
-	var b = params.b;
-
-	return function(input) {
-		console.log("Input")
-		console.log(input)
-		var inputVector = makeVector(input);
-		var h = T.tanh(T.add(T.dot(W[0], inputVector), b[0]));
-		var output = T.add(T.dot(W[1], h), b[1]);
-		
-		//var inputAsArray = input.toFlatArray();
-		// console.log("height: " + inputAsArray[0] + 
-		//     ", weight: " + inputAsArray[1] +
-		//     ", output: " + T.sumreduce(ad.value(output)));
-		
-		return T.sumreduce(output)
-	};
-};
+//var gaussianNN = function(hiddenSize, inputSize) {
+//	var params = nnParameterPrior(hiddenSize, inputSize);
+//	var W = params.W;
+//	var b = params.b;
+//
+//	return function(input) {
+//		console.log("Input")
+//		console.log(input)
+//		var inputVector = makeVector(input);
+//		var h = T.tanh(T.add(T.dot(W[0], inputVector), b[0]));
+//		var output = T.add(T.dot(W[1], h), b[1]);
+//		
+//		//var inputAsArray = input.toFlatArray();
+//		// console.log("height: " + inputAsArray[0] + 
+//		//     ", weight: " + inputAsArray[1] +
+//		//     ", output: " + T.sumreduce(ad.value(output)));
+//		
+//		return T.sumreduce(output)
+//	};
+//};
 
