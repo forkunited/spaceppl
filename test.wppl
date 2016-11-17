@@ -8,8 +8,33 @@
 
 var worldPrior = discretePointWorldUniformPriorNoReplacement(3,2, ["p1","p2","p3"], true);
 
+var wD = Infer({method : 'enumerate' }, worldPrior);
 
-Infer({method : 'enumerate' }, worldPrior);
+display(wD.support());
+
+//display(wD);
+//display(pointToDistanceWorldDistribution(wD));
+
+//var w = sample(wD);
+//var distW = summarizePointWorldByDistance(w);
+//display(w)
+//display(distW);
+
+//var s = summarizeWorldByPair(w, 
+//		function(p1,p2) {
+//			var pStr = (p1[0] < p2[0]) ? p1[0] + "_" + p2[0] : p2[0] + "_" + p1[0]; 
+//			return [pStr, spaceppl.space.distanceL2(p1[1],p2[1])] 
+//		}
+//	);
+
+//display(w);
+//display(s);
+
+//display(wD.params.dist);
+
+//mapObject(function(x, y) { return [x,y] }, wD);
+
+//spaceppl.space.distanceL2([1,2],[3,4]);
 
 //shuffle(4);
 

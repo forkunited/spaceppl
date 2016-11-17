@@ -60,3 +60,31 @@ var shuffleHelper = function(i, perm) {
 	}
 }
 
+var summarizeWorldByPair = function(world, fn) {
+	var kvPairs = _.pairs(world);
+	return _.object(filter(function(v) { return v != undefined }, 
+		_.flatten(
+			map(function(pair1) { map(function(pair2) {
+				if (pair1[0] != pair2[0]) {
+					return fn(pair1, pair2);
+				} else {
+					return undefined;
+				} 
+			}, kvPairs) }, kvPairs),
+		true)));
+}
+
+var summarizePointWorldByDistance = function(world) {
+	return summarizeWorldByPair(world,
+                function(p1,p2) {
+                        var pStr = (p1[0] < p2[0]) ? p1[0] + "_" + p2[0] : p2[0] + "_" + p1[0];
+                        return [pStr, spaceppl.space.distanceL2(p1[1],p2[1])]
+                }
+        );
+}
+
+var pointToDistanceWorldDistribution = function(Dist) {
+	return Infer({ method : 'enumerate' }, function() {
+		return summarizePointWorldByDistance(sample(Dist));
+	});
+}

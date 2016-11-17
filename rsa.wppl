@@ -1,5 +1,5 @@
 var makeRSA = function(params) {
-	var cacheSize = 20000;
+	var cacheSize = 10000;
 	var memApply = cache(function(utterance, world, parameters) {
 			return spaceppl.semantics.apply(utterance, world, parameters);	
 		}, cacheSize);

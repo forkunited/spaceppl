@@ -1,0 +1,47 @@
+var makeSpatialRSA = function(worldPrior, utterancePrior, nearThresholdPrior, nearVagueness) {
+	return makeRSA({ worldPrior : worldPrior,
+                         utterancePrior : utterancePrior,
+                         parametersPrior : function() {
+                                return {
+                                        nearThreshold : nearThresholdPrior(),
+                                        nearVagueness : nearVagueness,
+                                        nearFn : spaceppl.space.nearPoints
+                                }
+                        }
+                });
+}
+
+var trainSpatialRSA = function(worldPrior,
+				utterancePrior,
+				nearThresholdPrior,
+				nearVagueness,
+				iterations,
+				samplesPerUtterance,
+				gradientSamples,
+				nearPointsNetworkParametersPrior) {
+	
+	var groundTruthListener = makeSpatialRSA(worldPrior, utterancePrior, nearThresholdPrior, nearVagueness);
+
+	var networkParametersPrior = function() { 
+		var nearPointsNetworkParameters = nearPointsNetworkParametersPrior(); 
+		return { worldPrior : worldPrior, 
+			 utterancePrior : utterancePrior,
+		 	 parametersPrior : function() {
+			 	return {
+					nearThreshold : nearThresholdPrior(), 
+					nearVagueness : nearVagueness, 
+					nearFn : spaceppl.space.nearPointsNetwork,
+					nearPointsNetworkParameters : nearPointsNetworkParameters 
+				}
+			}
+		}
+	};
+
+	var utterances = (Infer({method : 'enumerate'}, utterancePrior)).support();
+
+	display("Spatial RSA making training data...");
+	var trainData = makeData(groundTruthListener, utterances, samplesPerUtterance);
+
+	display("Spatial RSA training model...");
+	return train(makeTrainingObj(makeRSA, networkParametersPrior), trainData, iterations, gradientSamples);
+}

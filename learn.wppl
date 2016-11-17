@@ -10,27 +10,33 @@ var makeData = function(distribution, possibleInputs, samplesPerInput) {
 		/* shallow */ true);
 } 
 
-var makeTrainingObj = function(model, parameterPrior, data) {
-	return function() {
-		var modelInstance = model(parameterPrior());
+var makeTrainingObj = function(model, parameterPrior) {
+	return function(data) {
+		return function() {
+			var modelInstance = model(parameterPrior());
 		
-		if (data) {
-			mapData({ data: data }, function(datum) {
-				var dist = modelInstance(datum.input);
-				observe(dist, datum.output);
-			});
-		}
+			if (data) {
+				mapData({ data: data }, function(datum) {
+					var dist = modelInstance(datum.input);
+					observe(dist, datum.output);
+				});
+			}
 
-		return modelInstance;
+			return modelInstance;
+		}
 	}
 }
 
-var train = function(trainingObj, iterations, gradientSamples) {
-	return Optimize(trainingObj,
+var train = function(trainingObj, data, iterations, gradientSamples) {
+	var trainingResults = Optimize(trainingObj(data),
 			{
 				steps: iterations,
 				estimator : { ELBO : { samples : gradientSamples }},
 			});
+
+	mapObject(function(k,v) { display(v) }, trainingResults);
+
+	return sample(SampleGuide(trainingObj(), { params: trainingResults }));
 }
 
 var makeVector = function(arr) {
