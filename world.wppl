@@ -1,18 +1,22 @@
-var discretePointWorldUniformPrior = function(length, height, pointRefs) {
+/*
+ * Grid priors... unused lately
+ */
+
+var discretePointWorldUniformGridPrior = function(length, height, pointRefs) {
 	return function() {
 		var points = map(function(pointRef) { return [randomInteger(length), randomInteger(height)] }, pointRefs);
 		return _.object(pointRefs, points);
 	}
 }
 
-var DiscretePointWorldUniformPrior = function(length, height, pointRefs) {
-	var prior = discretePointWorldUniformPrior(length, height, pointRefs);
+var DiscretePointWorldUniformGridPrior = function(length, height, pointRefs) {
+	var prior = discretePointWorldUniformGridPrior(length, height, pointRefs);
 	return Infer({ method : 'enumerate' }, function() {
 		return prior();
 	})
 }
 
-var discretePointWorldUniformPriorNoReplacementInit = function(length, height, pointRefs, ordered) {
+var discretePointWorldUniformGridPriorNoReplacementInit = function(length, height, pointRefs, ordered) {
 	return function() {
 		var subset = ordered ?
 			sort(randomSubset(length*height, pointRefs.length))
@@ -22,21 +26,146 @@ var discretePointWorldUniformPriorNoReplacementInit = function(length, height, p
 	}
 }
 
-var DiscretePointWorldUniformPriorNoReplacement = function(length, height, pointRefs, ordered) {
-	var prior = discretePointWorldUniformPriorNoReplacementInit(length, height, pointRefs, ordered);
+var DiscretePointWorldUniformGridPriorNoReplacement = function(length, height, pointRefs, ordered) {
+	var prior = discretePointWorldUniformGridPriorNoReplacementInit(length, height, pointRefs, ordered);
 	return Infer({ method : 'enumerate' }, function() {
 		return prior();
 	})
 }
 
-var discretePointWorldUniformPriorNoReplacement = function(length, height, pointRefs, ordered) {
-	var dist = DiscretePointWorldUniformPriorNoReplacement(length, height, pointRefs, ordered);
+var discretePointWorldUniformGridPriorNoReplacement = function(length, height, pointRefs, ordered) {
+	var dist = DiscretePointWorldUniformGridPriorNoReplacement(length, height, pointRefs, ordered);
 	return function() {
 		return sample(dist);
 	}
 }
 
+/* 
+ * Point world uniform prior places points in a square
+ */
+
+var makePossibleLocations = function(length, height, possibleLocationCount) {
+	return mapN(function(i) { return [uniform(0,length), uniform(0, height)] }, possibleLocationCount);
+}
+
+var discretePointWorldUniformPriorInit = function(length, height, possibleLocationCount, pointRefs, ordered) {
+	var possibleLocations = makePossibleLocations(length, height, possibleLocationCount);
+	return discreteWorldUniformPriorInitFromLocations(possibleLocations, pointRefs, ordered);
+}
+
+var discretePointWorldUniformPriorInitFromLocations = function(possibleLocations, pointRefs, ordered) {
+	return function() {
+		var subset = ordered ?
+			sort(randomSubset(possibleLocations.length, pointRefs.length))
+			: randomSubset(possibleLocations.length, pointRefs.length);
+		var points = map(function(pointIndex) { return possibleLocations[pointIndex] }, subset);
+		return _.object(pointRefs, points);
+	}
+}
+
+var DiscretePointWorldUniformPrior = function(length, height, possibleLocationCount, pointRefs, ordered) { 
+	var prior = discretePointWorldUniformPriorInit(length, height, possibleLocationCount, pointRefs, ordered);
+	return Infer({ method : 'enumerate' }, function() {
+		return prior();
+	});
+}
+
+var discretePointWorldUniformPrior = function(length, height, possibleLocationCount, pointRefs, ordered) {
+	var dist = DiscretePointWorldUniformPrior(length, height, possibleLocationCount, pointRefs, ordered);
+	return function() { 
+		return sample(dist);
+	}
+}
+
+/*
+ * Collection of point world uniform priors used for training models
+ */
+
+
+/*
+ * Repeat k times:
+ * 	Sample possible locations
+ *	Check if possible location already in location map
+ * 		If not, then map location to prior over possible locations
+ */
+var discretePointWorldUniformPriorCollectionInit = function(length, height, possibleLocationCount, pointRefs, ordered, k) {	
+	var helperF = function(k, priorsF, supports) {
+		if (k == 0) {
+			var parameterizedPrior = function(parameter) {
+				var Prior = priorsF(parameter);
+				return sample(Prior);	
+			};
+
+			return { parameterizedPrior : parameterizedPrior, ParameterizedPrior : priorsF,  parameterClasses : supports };
+		}
+
+		var locations = makePossibleLocations(length, height, possibleLocationCount);
+
+		// Check if priors collection already contains the possible locations
+		if (any(function(loc) { priorsF(loc) != undefined  }, locations)) {
+			return helperF(k, priorsF, supports); // Sample different locations if it already has these
+		} else {
+			// Construct prior from possible locations and put it in the map
+			var prior = discretePointWorldUniformPriorInitFromLocations(locations, pointRefs, ordered);
+			var Prior = Infer({ method : 'enumerate' }, function() { return prior() });
+			// Put the prior in the map
+			var newPriorsF = function(loc) {
+				if (loc === undefined || any(function(l) { return _.isEqual(l, loc) }, locations)) {
+					return Prior
+				} else {
+					return priorsF(loc);
+				}
+			}
+
+			var newSupports = _.union(supports, [locations]); 
+			// Construct the rest of the k-1 priors
+			return helperF(k-1, newPriorsF, newSupports);
+		}
+	}
+
+	return helperF(k, function(loc) { return undefined }, []);
+}
+
+var getCanonicalParameters = function(parameterClasses) {
+	return map(function(parameterClass) { return parameterClass[0] }, parameterClasses);
+}
+
+var transformParameterizedPrior = function(fn, ParameterizedPrior, parameters) {
+	var Priors = map(function(parameter) { return [parameter, fn(ParameterizedPrior(parameter))] }, parameters);
+
+	return function(parameter) {
+		var paramAndPrior = filter(function(P) { return _.isEqual(P[0], parameter) }, Priors);
+		return paramAndPrior[0][1];
+	}
+}
+
+/*
+ * Random subset helper function
+ */
+
 var randomSubset = function(n, k) {
+	var randomSubsetHelper = function(subset, possible) {
+		var nextIndex = randomInteger(possible.length);
+		var nextVal = possible[nextIndex];
+		var nextPossible = _.without(possible, nextVal);
+		var nextSubset = _.union(subset, [nextVal]);
+
+
+		if (nextSubset.length == k) {
+			return nextSubset;
+		} else {
+			return randomSubsetHelper(nextSubset, nextPossible); 
+		}
+	};
+
+	return randomSubsetHelper([], _.range(n));
+}
+
+/*
+ * Old slow version of random subset that relies on shuffling
+ */
+
+var randomSubsetShuffle = function(n, k) {
 	var perm = shuffle(n);
 	return _.initial(perm, n-k);
 }
@@ -60,6 +189,37 @@ var shuffleHelper = function(i, perm) {
 	}
 }
 
+/*
+ * World transformation functions
+ */
+
+var transformWorld = function(world, fn) {
+	var kvPairs = _.pairs(world);
+	return _.object(
+			filter(function(v) { return v != undefined }, 
+				map(fn, kvPairs)
+			)
+		);
+}
+
+var translateWorld = function(world, xTrans, yTrans) {
+	return transformWorld(world, function(refPointPair) {
+		return [refPointPair[0], spaceppl.space.translatePoint(refPointPair[1], xTrans, yTrans)]
+	});
+}
+
+var scaleWorld = function(world, xScale, yScale) {
+	return transformWorld(world, function(refPointPair) {
+		return [refPointPair[0], spaceppl.space.scalePoint(refPointPair[1], xScale, yScale)]
+	});
+}
+
+var rotateWorld = function(world, theta) {
+	return transformWorld(world, function(refPointPair) {
+		return [refPointPair[0], spaceppl.space.rotatePoint(refPointPair[1], theta)]
+	});
+}
+
 var summarizeWorldByPair = function(world, fn) {
 	var kvPairs = _.pairs(world);
 	return _.object(filter(function(v) { return v != undefined }, 
@@ -74,17 +234,47 @@ var summarizeWorldByPair = function(world, fn) {
 		true)));
 }
 
-var summarizePointWorldByDistance = function(world) {
+var summarizePointWorldByDistance = function(world, filterPoint, round) {
 	return summarizeWorldByPair(world,
                 function(p1,p2) {
-                        var pStr = (p1[0] < p2[0]) ? p1[0] + "_" + p2[0] : p2[0] + "_" + p1[0];
-                        return [pStr, spaceppl.space.distanceL2(p1[1],p2[1])]
-                }
+			if (filterPoint && p1[0] != filterPoint && p2[0] != filterPoint) {
+				return undefined;
+			} else {
+                        	var pStr = (p1[0] < p2[0]) ? p1[0] + "_" + p2[0] : p2[0] + "_" + p1[0];
+				var d = spaceppl.space.distanceL2(p1[1],p2[1]);
+				return [pStr, spaceppl.util.round(d, round)];
+			}
+		}
         );
 }
 
-var pointToDistanceWorldDistribution = function(Dist) {
+var pointToDistanceWorldDistribution = function(Dist, filterPoint, round) {
 	return Infer({ method : 'enumerate' }, function() {
-		return summarizePointWorldByDistance(sample(Dist));
+		return summarizePointWorldByDistance(sample(Dist), filterPoint, round);
 	});
 }
+
+var transformWorldDistribution = function(Dist, fn) {
+	return Infer({ method : 'enumerate' }, function() {
+		return transformWorld(sample(Dist), fn);
+	});
+}
+
+var translateWorldDistribution = function(Dist, xTrans, yTrans) {
+	return Infer({ method : 'enumerate' }, function() {
+		return translateWorld(sample(Dist), xTrans, yTrans);
+	});
+}
+
+var scaleWorldDistribution = function(Dist, xScale, yScale) {
+	return Infer({ method : 'enumerate' }, function() {
+		return scaleWorld(sample(Dist), xScale, yScale);
+	});
+}
+
+var rotateWorldDistribution = function(Dist, theta) {
+	return Infer({ method : 'enumerate' }, function() {
+		return rotateWorld(sample(Dist), theta);
+	});
+}
+

@@ -1,28 +1,45 @@
-var makeData = function(distribution, possibleInputs, samplesPerInput) {
-	return _.flatten(
-		map(function(input) { 
-			var dist = distribution(input);
-			return repeat(samplesPerInput, function() {
-				return {input: input, output: sample(dist)}
-			});
-		}, 
-		possibleInputs), 
-		/* shallow */ true);
+var makeData = function(distribution, samplesPerInput, possibleInputs0, possibleInputs1) {
+	if (possibleInputs1 != undefined) {
+		return _.flatten(
+			map(function(input) {
+				return map(function(input1) {
+					var dist = distribution(input, input1);
+					return repeat(samplesPerInput, function() {
+						/*display(input);
+						display(input1);
+						display(dist);*/
+						return { input : input, input1 : input1, output : sample(dist) };
+					});
+				}, possibleInputs1);
+			}, possibleInputs0), 
+			false);
+	} else {
+		return _.flatten(
+			map(function(input) { 
+				var dist = distribution(input);
+				return repeat(samplesPerInput, function() {
+					return {input: input, output: sample(dist)}
+				});
+			}, 
+			possibleInputs0), 
+			/* shallow */ true);
+	}
 } 
 
 var makeTrainingObj = function(model, parameterPrior) {
 	return function(data) {
 		return function() {
-			var modelInstance = model(parameterPrior());
+			var parameters = parameterPrior();
+			var modelInstance = model(parameters);
 		
 			if (data) {
 				mapData({ data: data }, function(datum) {
-					var dist = modelInstance(datum.input);
+					var dist = modelInstance(datum.input, datum.input1);
 					observe(dist, datum.output);
 				});
 			}
 
-			return modelInstance;
+			return [modelInstance, parameters]; //return modelInstance;
 		}
 	}
 }
@@ -34,7 +51,7 @@ var train = function(trainingObj, data, iterations, gradientSamples) {
 				estimator : { ELBO : { samples : gradientSamples }},
 			});
 
-	mapObject(function(k,v) { display(v) }, trainingResults);
+	//mapObject(function(k,v) { display(v) }, trainingResults);
 
 	return sample(SampleGuide(trainingObj(), { params: trainingResults }));
 }

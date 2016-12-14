@@ -1,6 +1,18 @@
 var _ = require("underscore");
 var Tensor = require("adnn/tensor");
 
+var translatePoint = function(point, xTrans, yTrans) {
+	return [point[0] + xTrans, point[1] + yTrans]
+}
+
+var scalePoint = function(point, xScale, yScale) {
+	return [point[0]*xScale, point[1]*yScale]
+}
+
+var rotatePoint = function(point, theta) {
+	return [point[0]*Math.cos(theta)-point[1]*Math.sin(theta), point[0]*Math.sin(theta)+point[1]*Math.cos(theta)]
+}
+
 var nearPoints = function(point1, point2, parameters) {
 	return Math.sigmoid(-(1.0/parameters.nearVagueness)*(distanceL2(point1, point2) - parameters.nearThreshold))
 }
@@ -50,6 +62,10 @@ var nearPointsNetwork = function(point1, point2, parameters) {
 }
 
 module.exports = { 
+	translatePoint : translatePoint,
+	scalePoint : scalePoint,
+	rotatePoint : rotatePoint,
+
 	distanceL2: distanceL2,
 	
 	near: near, 

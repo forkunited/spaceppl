@@ -6,11 +6,10 @@
 
 //makeDiscretePointWorldUniformPrior(8,8,["p1","p2"]);
 
-var worldPrior = discretePointWorldUniformPriorNoReplacement(3,2, ["p1","p2","p3"], true);
+//var worldPrior = discretePointWorldUniformPriorNoReplacement(3,2, ["p1","p2","p3"], true);
+//var wD = Infer({method : 'enumerate' }, worldPrior);
 
-var wD = Infer({method : 'enumerate' }, worldPrior);
-
-display(wD.support());
+//display(wD.support());
 
 //display(wD);
 //display(pointToDistanceWorldDistribution(wD));
@@ -44,3 +43,123 @@ display(wD.support());
 //var c = cartesianProductMap((function(x,y) {x+y}), [1,2], [3,4]) 
 //display(c)
 //f()
+
+
+//spaceppl.util.distToArray(wD);
+
+//var b1 = Bernoulli({p: .4});//Infer({method : 'enumerate' }, function() { return shuffle(3) } );
+//var b2 = Bernoulli({p: .2});//Infer({method : 'enumerate' }, function() { return shuffle(3) } ); 
+//var p = Infer({method : 'enumerate'}, function() { return sample(b1) });
+//var q = Infer({method : 'enumerate'}, function() { return sample(b2) });
+
+//spaceppl.util.distToArray(Infer({method : 'enumerate'}, function() { return sample(p) }));
+
+//spaceppl.util.KL(p, q);
+
+//Infer({method : 'enumerate'}, function() { return randomSubset(16,3) });
+
+
+//var alpha = 1;
+/*var trainingSamplesPerUtterance = 1000;
+var trainingIterations = 1000;
+var trainingGradientSamples = 5;
+var pointRefs = ["p1","p2","p3"]; //, "p4", "p5", "p6"];
+var worldWidth = 3;
+var worldHeight = 3;
+var possiblePositionCount = 6;
+
+display("Making world prior...");
+var worldPrior = discretePointWorldUniformPrior(worldWidth, worldHeight, possiblePositionCount, pointRefs, false);
+//discretePointWorldUniformGridPriorNoReplacement(gridWidth,gridHeight, pointRefs, true);
+
+var WorldPrior = Infer({method:'enumerate'}, worldPrior);
+var TranslatedWorldPrior = translateWorldDistribution(WorldPrior, 10,10);
+var ScaledWorldPrior = scaleWorldDistribution(WorldPrior,10,10);
+var RotatedWorldPrior = rotateWorldDistribution(WorldPrior, 3.14/3);
+
+var translatedWorldPrior = function() { return sample(TranslatedWorldPrior) };
+var scaledWorldPrior = function() { return sample(ScaledWorldPrior) };
+var rotatedWorldPrior = function() { return sample(RotatedWorldPrior) };
+
+display("Making utterance prior...");
+var utterancePrior = nearFirstRestUtteranceUniformPrior(pointRefs);
+var nearThresholdPrior = function () { uniformDraw([1,10]) };
+var nearVagueness = .05;
+var trueListener = makeSpatialRSA(alpha, worldPrior, utterancePrior, nearThresholdPrior, nearVagueness);
+
+var displayDist = function(name, Dist) { display(name); display(spaceppl.util.distToArray(pointToDistanceWorldDistribution(Dist, 'p1', 3),3)) };
+
+displayDist("Listener", trueListener("spaceppl.space.near('p1','p2')"));
+*/
+//display("Hi");
+//test({}, 10);
+
+/*
+var f_args = function(arg) {
+	if (arg == 1) {
+		return "has arg";
+	} else {
+		return "nope";
+	}
+}
+
+var f_noargs = function() {
+	return "hi";
+}
+
+var test = function (f, f_n) {
+	return { f : f, f_n : f_n };
+}
+
+var o = test(f_args, f_noargs);
+
+var f_n = o.f_n;
+var f = o.f;
+
+display(f(1));
+display(f_n(1));
+
+display(undefined === undefined);
+display(undefined === [1,2]);
+display(1 === 1);
+display("Hi");
+display(_.isEqual([1,2], [1,2]));
+display(_.isEqual([1,1], [1,2]));
+*/
+
+
+var worldPriorsAndSupports = discretePointWorldUniformPriorCollectionInit(3, 3, 6, ["p1", "p2", "p3"], false, 10);
+
+/*var worldPriors = worldPriorsAndSupports[0];
+var supports = worldPriorsAndSupports[1];
+
+var w2 = worldPriors(supports[2][0]);
+display(supports);
+display(w2);
+
+display(worldPriors(supports[0][0]))
+*/
+
+/*
+var parameterClasses = worldPriorsAndSupports.parameterClasses;
+var ParameterizedPrior = worldPriorsAndSupports.ParameterizedPrior;
+var parameterizedPrior = worldPriorsAndSupports.parameterizedPrior;
+//display(makePrior(supports[0][0]));
+//display(makePrior(supports[2][0]));
+display(parameterizedPrior());
+display(parameterizedPrior(parameterClasses[2][0]));
+*/
+
+/*
+var f = function(x) { if (x === undefined) { return "no" } else { return "yes" } };
+var o = { f : f };
+var f_o = o.f;
+display(f("arg"));
+display(f_o("arg"));
+*/
+
+//var l = [undefined];
+//display(l.length);
+
+mapProduct(function(o1,o2) { return o1*o2 }, [1,2,3], [1,2]);
+

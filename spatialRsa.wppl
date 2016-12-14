@@ -1,37 +1,53 @@
-var makeSpatialRSA = function(worldPrior, utterancePrior, nearThresholdPrior, nearVagueness) {
-	return makeRSA({ worldPrior : worldPrior,
+var makeSpatialRSA = function(alpha, worldPrior, utterancePrior, nearThresholdPrior, nearVagueness, nearPointsNetworkParameters) {
+	var localWorldPrior = function(parameters) { return worldPrior(parameters.local); };	
+
+	return makeRSA({ worldPrior : localWorldPrior,
                          utterancePrior : utterancePrior,
-                         parametersPrior : function() {
+                         parametersPrior : function(local) {
                                 return {
-                                        nearThreshold : nearThresholdPrior(),
+                                        alpha : alpha,
+					nearThreshold : nearThresholdPrior(),
                                         nearVagueness : nearVagueness,
-                                        nearFn : spaceppl.space.nearPoints
-                                }
+                                        nearFn : (nearPointsNetworkParameters) ? spaceppl.space.nearPointsNetwork : spaceppl.space.nearPoints,
+					nearPointsNetworkParameters : nearPointsNetworkParameters,
+                                	local : local
+				}
                         }
                 });
 }
 
-var trainSpatialRSA = function(worldPrior,
+var trainSpatialRSA = function(alpha,
+				worldPrior,
 				utterancePrior,
 				nearThresholdPrior,
 				nearVagueness,
 				iterations,
 				samplesPerUtterance,
 				gradientSamples,
-				nearPointsNetworkParametersPrior) {
+				nearPointsNetworkParametersPrior,
+				worldParameters) {
 	
-	var groundTruthListener = makeSpatialRSA(worldPrior, utterancePrior, nearThresholdPrior, nearVagueness);
+	var groundTruthListener = makeSpatialRSA(alpha, worldPrior, utterancePrior, nearThresholdPrior, nearVagueness);
+	var localWorldPrior = function(parameters) { return worldPrior(parameters.local); };
 
 	var networkParametersPrior = function() { 
 		var nearPointsNetworkParameters = nearPointsNetworkParametersPrior(); 
-		return { worldPrior : worldPrior, 
+		return { worldPrior : localWorldPrior, 
 			 utterancePrior : utterancePrior,
-		 	 parametersPrior : function() {
+			 fixedParameters : {
+				alpha : alpha, 
+				nearVagueness : nearVagueness,
+				nearFn : spaceppl.space.nearPointsNetwork,
+				nearPointsNetworkParameters : nearPointsNetworkParameters
+			 },
+		 	 parametersPrior : function(local) {
 			 	return {
+					alpha : alpha, 
 					nearThreshold : nearThresholdPrior(), 
 					nearVagueness : nearVagueness, 
 					nearFn : spaceppl.space.nearPointsNetwork,
-					nearPointsNetworkParameters : nearPointsNetworkParameters 
+					nearPointsNetworkParameters : nearPointsNetworkParameters,
+					local : local
 				}
 			}
 		}
@@ -40,8 +56,7 @@ var trainSpatialRSA = function(worldPrior,
 	var utterances = (Infer({method : 'enumerate'}, utterancePrior)).support();
 
 	display("Spatial RSA making training data...");
-	var trainData = makeData(groundTruthListener, utterances, samplesPerUtterance);
-
+	var trainData = makeData(groundTruthListener, samplesPerUtterance, utterances, worldParameters);
 	display("Spatial RSA training model...");
 	return train(makeTrainingObj(makeRSA, networkParametersPrior), trainData, iterations, gradientSamples);
 }
