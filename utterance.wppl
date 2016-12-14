@@ -1,0 +1,19 @@
+var strToMention = function(str) { return "'" + str + "'" };
+
+var NearFirstRestUtteranceUniformPrior = function(refs) {
+	var refMentions = map(strToMention, refs);
+	var utterances = spaceppl.semantics.makeUtterances([["spaceppl.space.near"], [_.first(refMentions)], _.rest(refMentions)]);
+	return Infer({ method : 'enumerate' }, function() {
+		return uniformDraw(utterances);
+	});
+
+	return uniformDraw(utterances);
+}
+
+var nearFirstRestUtteranceUniformPrior = function(refs) {
+	var dist = NearFirstRestUtteranceUniformPrior(refs);
+	return function() {
+		return sample(dist);
+	}
+}
+

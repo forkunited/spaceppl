@@ -1,0 +1,9 @@
+var mapProduct = function(fn, arr1, arr2) {
+	return _.flatten(
+		map(function(item1) {
+			return map(function(item2) {
+				return fn(item1, item2);
+			}, arr2);
+		}, arr1), false);		
+}
+
