@@ -88,7 +88,56 @@ var discretePointWorldUniformPrior = function(length, height, possibleLocationCo
  *	Check if possible location already in location map
  * 		If not, then map location to prior over possible locations
  */
+
 var discretePointWorldUniformPriorCollectionInit = function(length, height, possibleLocationCount, pointRefs, ordered, k) {	
+	var helperF = function(k, priors, supports) {
+		if (k == 0) {
+			var ParameterizedPrior = function(parameter) {
+				if (parameter === undefined) {
+					var Prior = priors[supports[0][0].toString()];
+					return Prior;
+				} else { 
+					var Prior = priors[parameter.toString()];
+					return Prior;
+				}
+			}
+
+			var parameterizedPrior = function(parameter) {
+				if (parameter === undefined) {
+					var Prior = priors[supports[0][0].toString()];
+					return sample(Prior);
+				} else { 
+					var Prior = priors[parameter.toString()];
+					return sample(Prior);
+				}
+			};
+
+			return { parameterizedPrior : parameterizedPrior, ParameterizedPrior : ParameterizedPrior,  parameterClasses : supports };
+		}
+
+		var locations = makePossibleLocations(length, height, possibleLocationCount);
+
+		// Check if priors collection already contains the possible locations
+		if (any(function(loc) { priors[loc] != undefined  }, locations)) {
+			return helperF(k, priors, supports); // Sample different locations if it already has these
+		} else {
+			// Construct prior from possible locations and put it in the map
+			var prior = discretePointWorldUniformPriorInitFromLocations(locations, pointRefs, ordered);
+			var Prior = Infer({ method : 'enumerate' }, function() { return prior() });
+			// Put the prior in the map
+			var locPriors = _.object(map(function(l) { return [l.toString(), Prior] }, locations));
+			var newPriors = _.extend(priors, locPriors);
+			var newSupports = _.union(supports, [locations]); 
+			// Construct the rest of the k-1 priors
+			return helperF(k-1, newPriors, newSupports);
+		}
+	}
+
+	return helperF(k, {}, []);
+}
+ 
+/* Slow version */
+/*var discretePointWorldUniformPriorCollectionInit = function(length, height, possibleLocationCount, pointRefs, ordered, k) {	
 	var helperF = function(k, priorsF, supports) {
 		if (k == 0) {
 			var parameterizedPrior = function(parameter) {
@@ -124,7 +173,7 @@ var discretePointWorldUniformPriorCollectionInit = function(length, height, poss
 	}
 
 	return helperF(k, function(loc) { return undefined }, []);
-}
+}*/
 
 var getCanonicalParameters = function(parameterClasses) {
 	return map(function(parameterClass) { return parameterClass[0] }, parameterClasses);
@@ -240,7 +289,7 @@ var summarizePointWorldByDistance = function(world, filterPoint, round) {
 			if (filterPoint && p1[0] != filterPoint && p2[0] != filterPoint) {
 				return undefined;
 			} else {
-                        	var pStr = (p1[0] < p2[0]) ? p1[0] + "_" + p2[0] : p2[0] + "_" + p1[0];
+				var pStr = (p1[0] < p2[0]) ? p1[0] + "_" + p2[0] : p2[0] + "_" + p1[0];
 				var d = spaceppl.space.distanceL2(p1[1],p2[1]);
 				return [pStr, spaceppl.util.round(d, round)];
 			}

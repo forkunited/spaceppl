@@ -1,9 +1,8 @@
 var RSA_L = 0;
-var RSA_L_w = 1;
-var RSA_S = 2;
-var RSA_L_0 = 3;
+var RSA_S = 1;
+var RSA_All = 3;
 
-var makeRSA = function(params, returnDist) {
+var makeRSA = function(params, dist, level) {
 	var cacheSize = 10000;
 
 	var memApply = cache(function(utterance, world, parameters) {
@@ -16,7 +15,149 @@ var makeRSA = function(params, returnDist) {
 
 	var inferParams = { method : 'enumerate' };
 
-	var L_0 = cache(function(utterance, parameters) {
+    /* This is a hackish way to implement L0, S0, L1, S1, etc.
+     * It doesn't seem possible to do more cleanly because
+     * webppl doesn't support caching recursive or mutually
+     * recursive functions?
+     */
+
+    var _L0 = cache(function(utterance, parameters, paramsLocal) {
+        return Infer(inferParams, function() {
+            var params = (paramsLocal) ? parametersPrior(parameters, RSA_L, 0) : parameters;
+            var world = worldPrior(params);
+            var truthValue = memApply(utterance, world, params);
+            factor(Math.log(truthValue));
+            return world;
+        });
+    }, cacheSize);
+
+    var _S0 = cache(function (world, parameters) {
+        return Infer(inferParams, function () {
+            var utterance = utterancePrior(parameters);
+            var L_up = _L0(utterance, parameters, false);
+            factor(parameters.alpha * L_up.score(world));
+            return utterance;
+        })
+    }, cacheSize);
+
+    var _L1 = cache(function(utterance, parameters, paramsLocal) {
+        return Infer(inferParams, function() {
+            var params = (paramsLocal) ? parametersPrior(parameters, RSA_L, 1) : parameters;
+            var world = worldPrior(params);
+            var S_wp = _S0(world, params);
+            factor(S_wp.score(utterance));
+            return world;
+        });
+    }, cacheSize);
+
+    var _S1 = cache(function (world, parameters) {
+        return Infer(inferParams, function () {
+            var utterance = utterancePrior(parameters);
+            var L_up = _L1(utterance, parameters, false);
+            factor(parameters.alpha * L_up.score(world));
+            return utterance;
+        })
+    }, cacheSize);
+
+    var _L2 = cache(function(utterance, parameters, paramsLocal) {
+        return Infer(inferParams, function() {
+            var params = (paramsLocal) ? parametersPrior(parameters, RSA_L, 2) : parameters;
+            var world = worldPrior(params);
+            var S_wp = _S1(world, params);
+            factor(S_wp.score(utterance));
+            return world;
+        });
+    }, cacheSize);
+
+    var _S2 = cache(function (world, parameters) {
+        return Infer(inferParams, function () {
+            var utterance = utterancePrior(parameters);
+            var L_up = _L2(utterance, parameters, false);
+            factor(parameters.alpha * L_up.score(world));
+            return utterance;
+        })
+    }, cacheSize);
+
+    var _L3 = cache(function(utterance, parameters, paramsLocal) {
+        return Infer(inferParams, function() {
+            var params = (paramsLocal) ? parametersPrior(parameters, RSA_L, 3) : parameters;
+            var world = worldPrior(params);
+            var S_wp = _S2(world, params);
+            factor(S_wp.score(utterance));
+            return world;
+        });
+    }, cacheSize);
+
+    var _S3 = cache(function (world, parameters) {
+        return Infer(inferParams, function () {
+            var utterance = utterancePrior(parameters);
+            var L_up = _L3(utterance, parameters, false);
+            factor(parameters.alpha * L_up.score(world));
+            return utterance;
+        })
+    }, cacheSize);
+
+    var _dists = [
+        { L : _L0, S : _S0},
+        { L : _L1, S : _S1},
+        { L : _L2, S : _S2},
+        { L : _L3, S : _S3},
+    ];
+
+    var dists = mapN(
+        function(l) {
+            var S = cache(function(world, localParameters) {
+                return Infer(inferParams, function() {
+                    var parameters = parametersPrior(localParameters, RSA_S, l);
+                    var utterance = utterancePrior(parameters);
+                    var _L = _dists[l].L;
+                    var L_up = _L(utterance, localParameters, true);
+
+                    factor(parameters.alpha*L_up.score(world));
+                    return utterance;
+                })
+            }, cacheSize);
+
+            if (l == 0) {
+                var L = cache(function (utterance, localParameters) {
+                    return Infer(inferParams, function () {
+                        var parameters = parametersPrior(localParameters, RSA_L, l);
+                        var world = worldPrior(parameters);
+                        var truthValue = memApply(utterance, world, parameters);
+                        factor(Math.log(truthValue));
+                        return world;
+                    })
+                }, cacheSize);
+
+                return {"l" : l, "L" : L, "S" : S};
+            } else {
+                var L = cache(function (utterance, localParameters) {
+                    return Infer(inferParams, function () {
+                        var parameters = parametersPrior(localParameters, RSA_L, l);
+                        var world = worldPrior(parameters);
+                        var _S = _dists[l-1].S;
+                        var S_wp = _S(world, parameters);
+                        factor(S_wp.score(utterance));
+                        return world;
+                    })
+                }, cacheSize);
+
+                return {"l" : l, "L" : L, "S" : S};
+            }
+        },
+        level+1);
+
+    if (dist == RSA_L) {
+        return dists[level].L
+    } else if (dist == RSA_S) {
+        return dists[level].S;
+    } else {
+        return dists;
+    }
+
+    /* Old implementation */
+    /*
+	var _L_0 = cache(function(utterance, parameters) {
 			return Infer(inferParams, function() {
 				var world = worldPrior(parameters);
 				var truthValue = memApply(utterance, world, parameters);
@@ -26,37 +167,66 @@ var makeRSA = function(params, returnDist) {
 		}, cacheSize);
 
 		
-	var S = cache(function(world, parameters) {
+	var _S = cache(function(world, parameters) {
 			return Infer(inferParams, function() {
 				var utterance = utterancePrior(parameters);
-				var L_0_up = L_0(utterance, parameters);
+				var L_0_up = _L_0(utterance, parameters);
 				factor(parameters.alpha*L_0_up.score(world));
 				return utterance;
 			})
 		}, cacheSize);
 
 
+	var L_0 = cache(function(utterance, localParameters) {
+        return Infer(inferParams, function() {
+            var parameters = parametersPrior(localParameters);
+            var world = worldPrior(parameters);
+            var truthValue = memApply(utterance, world, parameters);
+            factor(Math.log(truthValue));
+            return world;
+        })
+    }, cacheSize);
+
+	var S = cache(function(world, localParameters) {
+        return Infer(inferParams, function() {
+        	var parameters = parametersPrior(localParameters);
+            var utterance = utterancePrior(parameters);
+            var L_0_up = _L_0(utterance, parameters);
+
+            factor(parameters.alpha*L_0_up.score(world));
+            return utterance;
+        })
+    }, cacheSize);
+
 	var L = cache(function(utterance, localParameters) {
 			return Infer(inferParams, function() {
 				var parameters = parametersPrior(localParameters);
 				var world = worldPrior(parameters);
-				var S_wp = S(world, parameters);
+				var S_wp = _S(world, parameters);
 				factor(S_wp.score(utterance));
 				return world; 
 			})
 		}, cacheSize);
 
 
-	if (returnDist == RSA_S) {
+	if (returnDist == RSA_All) { 
+		return { 
+			S : S,
+			L_0 : L_0,
+			L : L
+		}
+	} else if (returnDist == RSA_S) {
 		return S
 	} else if (returnDist == RSA_L_0) {
 		return L_0
 	} else {
 		return L
 	}
-	
-	/*  Note: Can't just return object containing functions here.. because 
-         *  webppl screws up function arguments when the functions are properties
-         *  of an object
-         */
+	*/
+}
+
+var makeRSAFactory = function(dist, level) {
+	return function(params) {
+		return makeRSA(params, dist, level);
+	}
 }

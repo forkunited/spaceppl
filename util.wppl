@@ -7,3 +7,17 @@ var mapProduct = function(fn, arr1, arr2) {
 		}, arr1), false);		
 }
 
+var constructSupport = function(dist, parameters) {
+	if (parameters != undefined) {
+        return _.unzip(_.flatten(map(function(param) {
+            return (Infer({method : 'enumerate'},
+                    function () {
+                        return [dist(param), param];
+                    })
+            ).support()
+        }, parameters), true));
+	} else {
+        return (Infer({method: 'enumerate'}, dist)).support();
+    }
+}
+

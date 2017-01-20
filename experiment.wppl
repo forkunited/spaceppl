@@ -1,89 +1,237 @@
-var alpha = 100;
-var trainingSamplesPerUtterance = 1000;
-var trainingIterations = 100;
-var trainingGradientSamples = 5;
-var pointRefs = ["p1","p2","p3"]; //, "p4", "p5", "p6"];
-var worldWidth = 3;
-var worldHeight = 3;
-var possiblePositionCount = 6;
+/*var outputKLTSV = function(results) {
+	display("iterations\tsamples\tworldPriorCount\tKL\ttranslatedKL\tscaledKL\trotatedKL\tstdKL\tstdTranslatedKL\tstdScaledKL\tstdRotatedKL");
+	return map(function(r) {
+		display(r.iterations + "\t" + r.samples + "\t" + r.worldPriorCount + "\t" + r.kls.meanKL + "\t" + r.kls.meanTranslatedKL + "\t" + r.kls.meanScaledKL + "\t" + r.kls.meanRotatedKL + "\t" + r.kls.stdKL + "\t" + r.kls.stdTranslatedKL + "\t" + r.kls.stdScaledKL + "\t" + r.kls.stdRotatedKL );
+	}, results);
+}*/
 
-display("Making world prior...");
-var worldPrior = discretePointWorldUniformPrior(worldWidth, worldHeight, possiblePositionCount, pointRefs, false);
+var runTrainingExperiment = function(params) {
+	/*display("Making world priors...");
+	var testWorldPriorsCollection = discretePointWorldUniformPriorCollectionInit(params.worldWidth, params.worldHeight, params.possiblePositionCount, params.pointRefs, false, params.worldPriorCount[worldPriorCount.length-1]); 
+	var testWorldPrior = worldPriorsCollection.parameterizedPrior;
+	var testWorldPriorParameters = getCanonicalParameters(worldPriorsCollection.parameterClasses);
+	var TestWorldPrior = worldPriorsCollection.ParameterizedPrior;
+	*/
+	return _.flatten(map(function(iterations) {
+		return map(function(samples) {
+			return map(function(worldPriorCount) {
+				var localParams = { rsaDist : params.rsaDist,
+									rsaTrainingLevel : params.rsaTrainingLevel,
+                                    rsaEvaluationLevel : params.rsaEvaluationLevel,
+									alpha : params.alpha,
+									trainingSamplesPerUtteranceWorld : samples,  // Want 1000 per utterance (then give 200 here if 5 world priors)
+									trainingIterations : iterations,
+									trainingGradientSamples : params.trainingGradientSamples,
+									pointRefs : params.pointRefs, 
+									worldWidth : params.worldWidth,
+									worldHeight : params.worldHeight,
+									possiblePositionCount : params.possiblePositionCount,
+									worldPriorCount : worldPriorCount,
+									nearThresholds : params.nearThresholds,
+									nearVagueness : params.nearVagueness } 
+				
+				var trainingResults = runTrainingEpisode(localParams);
+				var dists = makeTransformedDistributions(trainingResults, localParams);
+				if (params.evaluation == "KL") {
+					var kls = computeKLs(dists, trainingResults.utterances, trainingResults.worldPriorParameters);
+					return { iterations : iterations, samples : samples, worldPriorCount : worldPriorCount, kls : kls }
+				} else if (params.evaluation == "KTD") {
+					var ktds = computeKTDs(dists, trainingResults.utterances, trainingResults.worldPriorParameters);
+					return { iterations : iterations, samples : samples, worldPriorCount : worldPriorCount, ktds : ktds }
+				} else {
+					var wktds = computeWKTDs(dists, trainingResults.utterances, trainingResults.worldPriorParameters);
+					return { iterations : iterations, samples : samples, worldPriorCount : worldPriorCount, wktds : wktds }
+				}
+			}, params.worldPriorCount)
+		}, params.trainingSamplesPerUtteranceWorld)
+	}, params.trainingIterations));
+}
 
-//discretePointWorldUniformGridPriorNoReplacement(gridWidth,gridHeight, pointRefs, true);
+var runTrainingEpisode = function(params) { 
+	display("Making world priors...");
+	var worldPriorsCollection = discretePointWorldUniformPriorCollectionInit(params.worldWidth, params.worldHeight, params.possiblePositionCount, params.pointRefs, false, params.worldPriorCount); 
+	var worldPrior = worldPriorsCollection.parameterizedPrior;
+	var worldPriorParameters = getCanonicalParameters(worldPriorsCollection.parameterClasses);
+	var WorldPrior = worldPriorsCollection.ParameterizedPrior;
 
-var WorldPrior = Infer({method:'enumerate'}, worldPrior);
-var TranslatedWorldPrior = translateWorldDistribution(WorldPrior, 10,10);
-var ScaledWorldPrior = scaleWorldDistribution(WorldPrior,10,10);
-var RotatedWorldPrior = rotateWorldDistribution(WorldPrior, 3.14/3);
+	display("Making utterance prior...");
+	var utterancePrior = nearFirstRestUtteranceUniformPrior(params.pointRefs);
+	var utterances = constructSupport(utterancePrior);
+	
+	var nearThresholdPrior = function() { uniformDraw(params.nearThresholds) };
 
-var translatedWorldPrior = function() { return sample(TranslatedWorldPrior) };
-var scaledWorldPrior = function() { return sample(ScaledWorldPrior) }; 
-var rotatedWorldPrior = function() { return sample(RotatedWorldPrior) };
+	// Hidden size, input size (input is 4 for two 2d points)
+	var nearPointsNetworkParametersPrior = function() { return nnGaussianParameterPrior(4,4); } /* First is hidden size */
 
-display("Making utterance prior...");
-var utterancePrior = nearFirstRestUtteranceUniformPrior(pointRefs);
+	var trueDist = makeSpatialRSA(params.rsaDist, params.rsaTrainingLevel, params.alpha, worldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness);
 
-var nearThresholdPrior = function () { uniformDraw([1]) };
-var nearVagueness = .05;
-
-// Hidden size, input size (input is 4 for two 2d points)
-var nearPointsNetworkParametersPrior = function() { return nnGaussianParameterPrior(2,4); }
-
-var trueListener = makeSpatialRSA(alpha, worldPrior, utterancePrior, nearThresholdPrior, nearVagueness);
-var translatedListener = makeSpatialRSA(alpha, translatedWorldPrior, utterancePrior, nearThresholdPrior, nearVagueness);
-var scaledListener = makeSpatialRSA(alpha, scaledWorldPrior, utterancePrior, nearThresholdPrior, nearVagueness);
-var rotatedListener = makeSpatialRSA(alpha, rotatedWorldPrior, utterancePrior, nearThresholdPrior, nearVagueness);
-
-var trainingResults = trainSpatialRSA(alpha,
+	var trainingResults = trainSpatialRSA(
+				params.rsaDist,
+				params.rsaTrainingLevel,
+				params.alpha,
 				worldPrior,
 				utterancePrior,
 				nearThresholdPrior,
-				nearVagueness,
-				trainingIterations,
-				trainingSamplesPerUtterance,
-				trainingGradientSamples,
-				nearPointsNetworkParametersPrior);
+				params.nearVagueness,
+				params.trainingIterations,
+				params.trainingSamplesPerUtteranceWorld,
+				params.trainingGradientSamples,
+				nearPointsNetworkParametersPrior,
+				worldPriorParameters);
 
-var trainedListener = trainingResults[0];
+	var trainedDist = trainingResults[0];
+	var nearPointsNetworkParameters = trainingResults[1].fixedParameters.nearPointsNetworkParameters;
+	
+	return { trueDist : trueDist,
+		 trainedDist : trainedDist, 
+		 nearPointsNetworkParameters : nearPointsNetworkParameters,
+		 WorldPrior : WorldPrior,
+		 worldPrior : worldPrior,
+		 worldPriorParameters : worldPriorParameters,
+		 nearThresholdPrior : nearThresholdPrior,
+		 utterancePrior : utterancePrior,
+		 utterances : utterances
+	};
+}
 
-var nearPointsNetworkParameters = trainingResults[1].fixedParameters.nearPointsNetworkParameters;
-var translatedTrainedListener = makeSpatialRSA(alpha, translatedWorldPrior, utterancePrior, nearThresholdPrior, nearVagueness, nearPointsNetworkParameters);
-var scaledTrainedListener = makeSpatialRSA(alpha, scaledWorldPrior, utterancePrior, nearThresholdPrior, nearVagueness, nearPointsNetworkParameters);
-var rotatedTrainedListener = makeSpatialRSA(alpha, rotatedWorldPrior, utterancePrior, nearThresholdPrior, nearVagueness, nearPointsNetworkParameters);
+var makeTransformedDistributions = function(trainingResults, params) {
+	var nearThresholdPrior = trainingResults.nearThresholdPrior;
+	var utterancePrior = trainingResults.utterancePrior;
+	var nearPointsNetworkParameters = trainingResults.nearPointsNetworkParameters;
+	
+	var TranslatedWorldPrior = transformParameterizedPrior(function(Prior) { return translateWorldDistribution(Prior,10,10) }, trainingResults.WorldPrior, trainingResults.worldPriorParameters);
+	var ScaledWorldPrior = transformParameterizedPrior(function(Prior) { return scaleWorldDistribution(Prior,10,10) }, trainingResults.WorldPrior, trainingResults.worldPriorParameters);
+	var RotatedWorldPrior = transformParameterizedPrior(function(Prior) { return rotateWorldDistribution(Prior,3.14/3) }, trainingResults.WorldPrior, trainingResults.worldPriorParameters);
+	
+	var translatedWorldPrior = function(param) { return sample(TranslatedWorldPrior(param)) };
+	var scaledWorldPrior = function(param) { return sample(ScaledWorldPrior(param)) };
+	var rotatedWorldPrior = function(param) { return sample(RotatedWorldPrior(param)) };
+	
+	var translatedRsa = makeSpatialRSA(RSA_All, params.rsaEvaluationLevel, params.alpha, translatedWorldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness);
+	var scaledRsa = makeSpatialRSA(RSA_All, params.rsaEvaluationLevel, params.alpha, scaledWorldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness);
+	var rotatedRsa = makeSpatialRSA(RSA_All, params.rsaEvaluationLevel, params.alpha, rotatedWorldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness);
+	
+	var translatedTrainedRsa = makeSpatialRSA(RSA_All, params.rsaEvaluationLevel, params.alpha, translatedWorldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness, nearPointsNetworkParameters);
+	var scaledTrainedRsa = makeSpatialRSA(RSA_All, params.rsaEvaluationLevel, params.alpha, scaledWorldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness, nearPointsNetworkParameters);
+	var rotatedTrainedRsa = makeSpatialRSA(RSA_All, params.rsaEvaluationLevel, params.alpha, rotatedWorldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness, nearPointsNetworkParameters);
 
-var displayDist = function(name, Dist) { display(name); display(spaceppl.util.distToArray(pointToDistanceWorldDistribution(Dist, 'p1', 3),3)) };
+	var trueRsa = makeSpatialRSA(RSA_All, params.rsaEvaluationLevel, params.alpha, trainingResults.worldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness);
+	var trainedRsa = makeSpatialRSA(RSA_All, params.rsaEvaluationLevel, params.alpha, trainingResults.worldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness, nearPointsNetworkParameters);
 
-displayDist("Utterance Prior", Infer({method:'enumerate'}, function() { return utterancePrior }));
-displayDist("World Prior", WorldPrior);
-displayDist("World Prior (translated)", TranslatedWorldPrior);
-displayDist("World Prior (scaled)", ScaledWorldPrior);
-displayDist("World Prior (rotated)", RotatedWorldPrior);
+	var defaultWorldsAndParams = constructSupport(trainingResults.worldPrior, trainingResults.worldPriorParameters);
+    var translatedWorldsAndParams = constructSupport(translatedWorldPrior, trainingResults.worldPriorParameters);
+    var scaledWorldsAndParams = constructSupport(scaledWorldPrior, trainingResults.worldPriorParameters);
+    var rotatedWorldsAndParams = constructSupport(rotatedWorldPrior, trainingResults.worldPriorParameters);
 
-var testUtterance = "spaceppl.space.near('p1','p2')";
+	return {
+		Default : { gold : trueRsa, trained : trainedRsa, worldsAndParameters : defaultWorldsAndParams },
+		Translated : { gold : translatedRsa, trained : translatedTrainedRsa, worldsAndParameters : translatedWorldsAndParams },
+		Scaled : { gold : scaledRsa, trained : scaledTrainedRsa, worldsAndParameters : scaledWorldsAndParams },
+		Rotated : { gold : rotatedRsa, trained : rotatedTrainedRsa, worldsAndParameters : rotatedWorldsAndParams }
+	};
+}
 
-displayDist("Ground truth distribution near(p1,p2)", trueListener(testUtterance));
-displayDist("Learned distribution near(p1,p2)", trainedListener(testUtterance));
+var displayDistributions = function(dists, utterance, worldSampleIndex) {
+	var displayWorldDist = function(name, Dist) { display(name); display(spaceppl.util.distToArray(pointToDistanceWorldDistribution(Dist, 'p1', 3),3)) };
+    var displayDist = function(name, Dist) { display(name); display(spaceppl.util.distToArray(Dist,3)) };
 
-displayDist("Ground truth translated distribution near(p1,p2)", translatedListener(testUtterance));
-displayDist("Learned translated distribution near(p1,p2)", translatedTrainedListener(testUtterance));
+	return mapObject(function(transKey, lds) {
+        var world = lds.worldsAndParameters[0][worldSampleIndex];
+        var worldPriorParam = lds.worldsAndParameters[1][worldSampleIndex];
 
-displayDist("Ground truth scaled distribution near(p1,p2)", scaledListener(testUtterance));
-displayDist("Learned scaled distribution near(p1,p2)", scaledTrainedListener(testUtterance));
+		return map2(function(ldGold, ldTrained) {
+            var trueL = ldGold.L;
+            var trueS = ldGold.S;
+            var trainedL = ldTrained.L;
+            var trainedS = ldTrained.S;
+			var level = ldGold.l;
 
-displayDist("Ground truth rotated distribution near(p1,p2)", rotatedListener(testUtterance));
-displayDist("Learned rotated distribution near(p1,p2)", rotatedTrainedListener(testUtterance));
+            displayWorldDist(transKey + " L" + level, trueL(utterance, worldPriorParam));
+            displayWorldDist(transKey + " L" + level + " (trained)", trainedL(utterance, worldPriorParam));
+            display("Example world:")
+            display(summarizePointWorldByDistance(world, 'p1', 3));
+            displayDist(transKey + " S" + level, trueS(world, worldPriorParam));
+            displayDist(transKey + " S" + level + " (trained)", trainedS(world, worldPriorParam));
+		}, lds.gold, lds.trained);
+	}, dists);
+}
 
-display("near(p1,p2) KL");
-display(spaceppl.util.KL(trueListener(testUtterance), trainedListener(testUtterance)));
+var computeKL = function(trueDist, trainedDist, params0, params1, prod) {
+    var mapFn = (prod) ? mapProduct : map2;
 
-display("near(p1,p2) translated KL");
-display(spaceppl.util.KL(translatedListener(testUtterance), translatedTrainedListener(testUtterance)));
+	var kls = mapFn(function(param0, param1) {
+		var kl = spaceppl.util.KL(trueDist(param0,param1), trainedDist(param0,param1));
+		if (0 <= kl)
+			return kl;
+		else
+			return undefined;
+	}, params0, params1);
 
-display("near(p1,p2) scaled KL");
-display(spaceppl.util.KL(scaledListener(testUtterance), scaledTrainedListener(testUtterance)));
+	var filteredKLs = filter(function (item) { item != undefined }, kls);
+	
+	return [listMean(filteredKLs), listStdev(filteredKLs)];
+};
 
-display("near(p1,p2) rotated KL");
-display(spaceppl.util.KL(rotatedListener(testUtterance), rotatedTrainedListener(testUtterance)));
+var computeTopAccuracy = function(trueDist, trainedDist, params0, params1, prod) {
+    var mapFn = (prod) ? mapProduct : map2;
 
+    var accs = mapFn(function(param0, param1) {
+        return spaceppl.util.topMatch(trueDist(param0,param1), trainedDist(param0,param1));
+    }, params0, params1);
 
+    var filteredAccs = filter(function (item) { item != undefined }, accs);
+
+    return [listMean(filteredAccs), listStdev(filteredAccs)];
+};
+
+/* FIXME Later
+var computeKTD = function(trueDist, trainedDist, params0, params1) {
+	var ktds = mapProduct(function(param0, param1) {
+			return spaceppl.util.kendallTauDistance(trueDist(param0, param1), trainedDist(param0, param1));
+	}, params0, params1)
+
+	return [listMean(ktds), listStdev(ktds)];
+};
+
+var computeWKTD = function(trueDist, trainedDist, params0, params1) {
+	var ktds = mapProduct(function(param0, param1) {
+			return spaceppl.util.weightedKendallTauDistance(trueDist(param0, param1), trainedDist(param0, param1));
+	}, params0, params1)
+
+	return [listMean(ktds), listStdev(ktds)];
+};
+*/
+
+var computeKLs = function(dists, utterances, worldPriorParameters) {
+    return mapObject(function(transKey, lds) {
+        return map2(function(ldGold, ldTrained) {
+            var trueL = ldGold.L;
+            var trueS = ldGold.S;
+            var trainedL = ldTrained.L;
+            var trainedS = ldTrained.S;
+            var level = ldGold.l;
+
+            var KL_S = computeKL(trueL, trainedL, utterances, worldPriorParameters, true);
+            var KL_L = computeKL(trueS, trainedS, lds.worldsAndParameters[0], lds.worldsAndParameters[1], false);
+
+            return { level : level, KL_L : KL_L, KL_S : KL_S };
+        }, lds.gold, lds.trained);
+    }, dists);
+}
+
+var computeTopAccuracies = function(dists, utterances, worldPriorParameters) {
+    return mapObject(function(transKey, lds) {
+        return map2(function(ldGold, ldTrained) {
+            var trueL = ldGold.L;
+            var trueS = ldGold.S;
+            var trainedL = ldTrained.L;
+            var trainedS = ldTrained.S;
+            var level = ldGold.l;
+
+            var acc_S = computeTopAccuracy(trueL, trainedL, utterances, worldPriorParameters, true);
+            var acc_L = computeTopAccuracy(trueS, trainedS, lds.worldsAndParameters[0], lds.worldsAndParameters[1], false);
+
+            return { level : level, Accuracy_L : acc_L, Accuracy_S : acc_S };
+        }, lds.gold, lds.trained);
+    }, dists);
+}

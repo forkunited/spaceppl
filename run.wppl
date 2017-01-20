@@ -1,0 +1,88 @@
+/*
+var params = {
+	alpha : 100,
+	trainingSamplesPerUtteranceWorld : 20,  // Want 1000 per utterance (then give 200 here if 5 world priors)
+	trainingIterations : 1,
+	trainingGradientSamples : 5,
+	pointRefs : ["p1","p2","p3"], //, "p4", "p5", "p6"];
+	worldWidth : 3,
+	worldHeight : 3,
+	possiblePositionCount : 3, //6; (120 possible worlds)
+	worldPriorCount : 40, //5
+	nearThresholds : [1,10],
+	nearVagueness : .05
+}
+
+var trainingResults = runTrainingEpisode(params);
+var dists = makeTransformedDistributions(trainingResults, params);
+var kls = computeKLs(dists, trainingResults.utterances, trainingResults.worldPriorParameters);
+
+displayDistributions(dists, trainingResults.utterances[0], trainingResults.worldPriorParameters[0])
+display(kls);
+*/
+
+// Train different numbers of samples [25,100,150,200,1000] samples,  [3 position], [1] world 
+// Train different numbers of priors 
+// Use possible position count 3 and possible position count 6
+
+
+
+
+
+
+/*
+var params = {
+	alpha : 10,
+	trainingSamplesPerUtteranceWorld :  [1000], //[25,100,150,200,1000],//[15] works,//[25,50,100,150,200],  // Want 1000 per utterance (then give 200 here if 5 world priors)
+	trainingIterations : [100], //[300] works
+	trainingGradientSamples : 1,
+	pointRefs : ["p1","p2","p3"], //, "p4", "p5", "p6"];
+	worldWidth : 3,
+	worldHeight : 3,
+	possiblePositionCount : 4, //3 //6; (120 possible worlds)
+	worldPriorCount : [1],// works [10,20,30,40,50],//[20,40,60], //5
+	nearThresholds : [1,10],
+	nearVagueness : .05,
+	evaluation : "KL"
+}*/
+
+var params = {
+	rsaDist : RSA_S,
+	rsaTrainingLevel : 2,
+	rsaEvaluationLevel : 3,
+	alpha : 10,
+	trainingSamplesPerUtteranceWorld :  50, //[25,100,150,200,1000],//[15] works,//[25,50,100,150,200],  // Want 1000 per utterance (then give 200 here if 5 world priors)
+	trainingIterations : 1500, //[300] works
+	trainingGradientSamples : 1,
+	pointRefs : ["p1","p2","p3"], //, "p4", "p5", "p6"];
+	worldWidth : 3,
+	worldHeight : 3,
+	possiblePositionCount : 3, //3 //6; (120 possible worlds)
+	worldPriorCount : 20,// works [10,20,30,40,50],//[20,40,60], //5
+	nearThresholds : [1,10],
+	nearVagueness : .05,
+	evaluation : "KL"
+}
+
+var trainingResults = runTrainingEpisode(params);
+var dists = makeTransformedDistributions(trainingResults, params);
+displayDistributions(dists, trainingResults.utterances[0], 0)
+//var kls = computeKLs(dists, trainingResults.utterances, trainingResults.worldPriorParameters);
+//spaceppl.util.objectToString(kls, spaceppl.util.objectListToTSVString);
+var accs = computeTopAccuracies(dists, trainingResults.utterances, trainingResults.worldPriorParameters);
+spaceppl.util.objectToString(accs, spaceppl.util.objectListToTSVString);
+
+//var results = runTrainingExperiment(params);
+//display(results);
+//outputWKTDTSV(results);
+//outputKLTSV(results);
+/*var results1 = runTrainingExperiment(params);
+outputTSV(results1);
+var results2 = runTrainingExperiment(params);
+outputTSV(results2);
+var results3 = runTrainingExperiment(params);
+outputTSV(results3);
+var results4 = runTrainingExperiment(params);
+outputTSV(results4);
+var results5 = runTrainingExperiment(params);
+outputTSV(results5);*/

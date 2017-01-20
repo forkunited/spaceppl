@@ -1,21 +1,31 @@
-var makeData = function(distribution, samplesPerInput, possibleInputs0, possibleInputs1) {
-	if (possibleInputs1 != undefined) {
-		return _.flatten(
-			map(function(input) {
-				return map(function(input1) {
-					var dist = distribution(input, input1);
-					return repeat(samplesPerInput, function() {
+var makeData = function(distribution, samplesPerInput, possibleInputs0, possibleInputs1, allInputPairs) {
+	if (possibleInputs1 != undefined && allInputPairs) {
+        return _.flatten(
+            map(function (input) {
+                return map(function (input1) {
+                    var dist = distribution(input, input1);
+                    return repeat(samplesPerInput, function () {
 						/*display(input);
-						display(input1);
-						display(dist);*/
-						return { input : input, input1 : input1, output : sample(dist) };
-					});
-				}, possibleInputs1);
-			}, possibleInputs0), 
-			false);
+						 display(input1);
+						 display(dist);*/
+                        return {input: input, input1: input1, output: sample(dist)};
+                    });
+                }, possibleInputs1);
+            }, possibleInputs0),
+            false);
+    } else if (possibleInputs1 != undefined && !allInputPairs) {
+        return _.flatten(
+            map2(function(input, input1) {
+                    var dist = distribution(input, input1);
+                    return repeat(samplesPerInput, function() {
+                        return {input: input, input1: input1, output: sample(dist)}
+                    });
+                },
+                possibleInputs0, possibleInputs1),
+			/* shallow */ true);
 	} else {
 		return _.flatten(
-			map(function(input) { 
+			map(function(input) {
 				var dist = distribution(input);
 				return repeat(samplesPerInput, function() {
 					return {input: input, output: sample(dist)}
@@ -33,7 +43,7 @@ var makeTrainingObj = function(model, parameterPrior) {
 			var modelInstance = model(parameters);
 		
 			if (data) {
-				mapData({ data: data }, function(datum) {
+				mapData({ data: data /*, batchSize : 100 */}, function(datum) {
 					var dist = modelInstance(datum.input, datum.input1);
 					observe(dist, datum.output);
 				});
