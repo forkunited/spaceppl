@@ -52,7 +52,7 @@ var params = {
 	rsaEvaluationLevel : 3,
 	alpha : 10,
 	trainingSamplesPerUtteranceWorld :  50, //[25,100,150,200,1000],//[15] works,//[25,50,100,150,200],  // Want 1000 per utterance (then give 200 here if 5 world priors)
-	trainingIterations : 1500, //[300] works
+	trainingIterations : 1500, // 1500, //[300] works
 	trainingGradientSamples : 1,
 	pointRefs : ["p1","p2","p3"], //, "p4", "p5", "p6"];
 	worldWidth : 3,
