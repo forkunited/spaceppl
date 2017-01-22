@@ -27,7 +27,7 @@ def process_messy_file(file_path):
 def aggregate_directory(file_dir, file_type):
     files = [f for f in listdir(file_dir) if isfile(join(file_dir, f))]
     for file in files:
-        process_tsv_file(join(file_dir, f))
+        process_tsv_file(join(file_dir, file))
 
 
 aggregate_directory(input_file_dir, input_file_type)
