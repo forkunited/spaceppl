@@ -1,0 +1,4 @@
+--require . --out hi
+--require . --out bye
+--require . --out cat
+--require . --out dog

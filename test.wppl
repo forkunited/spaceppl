@@ -1,5 +1,8 @@
-var refs = ["p1", "p2", "p3"];
-var refMentions = map(strToMention, refs);
+//var refs = ["p1", "p2", "p3"];
+//var refMentions = map(strToMention, refs);
 //display(makeUtterances([["spaceppl.space.near"], [_.first(refMentions)], _.rest(refMentions)]));
 //display(randomSubset(refMentions, 2, true));
-display(makeUtterances([["spaceppl.space.near"], [2, true, refMentions]]));
+//display(makeUtterances([["spaceppl.space.near"], [2, true, refMentions]]));
+
+var args = parseArgs();
+display(args["out"]);

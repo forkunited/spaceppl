@@ -1,0 +1,6 @@
+--require . --random-seed 1 --rsaDist S --rsaTrainingLevel 2 --trainingSamplesPerUtteranceWorld 50 --trainingIterations 10 --worldPriorCount 20
+--require . --random-seed 1 --rsaDist S --rsaTrainingLevel 2 --trainingSamplesPerUtteranceWorld 50 --trainingIterations 50 --worldPriorCount 20
+--require . --random-seed 1 --rsaDist S --rsaTrainingLevel 2 --trainingSamplesPerUtteranceWorld 50 --trainingIterations 100 --worldPriorCount 20
+--require . --random-seed 1 --rsaDist S --rsaTrainingLevel 2 --trainingSamplesPerUtteranceWorld 50 --trainingIterations 500 --worldPriorCount 20
+--require . --random-seed 1 --rsaDist S --rsaTrainingLevel 2 --trainingSamplesPerUtteranceWorld 50 --trainingIterations 1000 --worldPriorCount 20
+--require . --random-seed 1 --rsaDist S --rsaTrainingLevel 2 --trainingSamplesPerUtteranceWorld 50 --trainingIterations 1500 --worldPriorCount 20
