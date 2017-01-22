@@ -41,9 +41,9 @@ def aggregate_directory(file_dir, file_type):
     files = [f for f in listdir(file_dir) if isfile(join(file_dir, f))]
     rows = []
     for file in files:
-        if file_type == 'MESSY'
+        if file_type == 'MESSY':
             rows.extend(process_messy_file(join(file_dir, file)))
-        else
+        else:
             rows.extend(process_tsv_file(join(file_dir, file)))
     return rows
 
