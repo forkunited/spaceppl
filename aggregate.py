@@ -27,6 +27,7 @@ def process_messy_file(file_path):
     pass
 
 def output_tsv(file_path, rows):
+    print(rows)
     fields = OrderedDict([(k, None) for k in rows[0].keys()])
     f = open(file_path, 'wb')
     try:
