@@ -1,8 +1,71 @@
 var strToMention = function(str) { return "'" + str + "'" };
 
+var makeUtterances = function(possibilities) {
+    var makeUtterancesHelper = function (possibilities) {
+        if (typeof(possibilities[0]) === 'string') {
+            return possibilities;
+            //return _.map(possibilities, function(possibility) { return utterance + possibility });
+        } else if (typeof(possibilities[0]) === 'number') {
+            var k = possibilities[0];
+            var ordered = possibilities[1];
+            var strPossibilities = map(function (p) {
+                return makeUtterancesHelper(p)
+            }, possibilities[2]);
+
+            var subsets = constructSupport(function () {
+                return randomSubset(strPossibilities, k, ordered)
+            });
+
+            var subsetStrs = map(function (subset) {
+                var subsetStr = reduce(function (acc, s) { acc + "," + s }, "", subset);
+                return subsetStr.substring(0, subsetStr.length - 1);
+            }, subsets);
+
+            return subsetStrs;
+        } else {
+            var strPossibilities = map(function (p) {
+                return makeUtterancesHelper(p)
+            }, possibilities);
+
+            if (strPossibilities.length >= 3) {
+                return strProduct(_.first(strPossibilities),
+                    strProduct(
+                        reduce(function (acc, p) {
+                            return strProduct(acc, p, "", ",")
+                        }, [""], _.initial(_.rest(strPossibilities))),
+                        _.last(strPossibilities), "", ""),
+                    "(", ")");
+            } else if (strPossibilities.length == 2) {
+                return strProduct(_.first(strPossibilities), _.last(strPossibilities), "(", ")");
+            } else {
+                return strPossibilities;
+            }
+        }
+    }
+
+	return _.union([""], makeUtterancesHelper(possibilities));
+}
+
+var NearUtteranceUniformPrior = function(refs) {
+    var refMentions = map(strToMention, refs);
+    var utterances = makeUtterances([["spaceppl.space.near"], [2, true, refMentions]]);
+    return Infer({ method : 'enumerate' }, function() {
+        return uniformDraw(utterances);
+    });
+
+    return uniformDraw(utterances);
+}
+
+var nearUtteranceUniformPrior = function(refs) {
+    var dist = NearUtteranceUniformPrior(refs);
+    return function() {
+        return sample(dist);
+    }
+}
+
 var NearFirstRestUtteranceUniformPrior = function(refs) {
 	var refMentions = map(strToMention, refs);
-	var utterances = spaceppl.semantics.makeUtterances([["spaceppl.space.near"], [_.first(refMentions)], _.rest(refMentions)]);
+	var utterances = makeUtterances([["spaceppl.space.near"], [_.first(refMentions)], _.rest(refMentions)]);
 	return Infer({ method : 'enumerate' }, function() {
 		return uniformDraw(utterances);
 	});

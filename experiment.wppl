@@ -1,17 +1,14 @@
-/*var outputKLTSV = function(results) {
-	display("iterations\tsamples\tworldPriorCount\tKL\ttranslatedKL\tscaledKL\trotatedKL\tstdKL\tstdTranslatedKL\tstdScaledKL\tstdRotatedKL");
+var outputTrainingResults = function(results) {
 	return map(function(r) {
-		display(r.iterations + "\t" + r.samples + "\t" + r.worldPriorCount + "\t" + r.kls.meanKL + "\t" + r.kls.meanTranslatedKL + "\t" + r.kls.meanScaledKL + "\t" + r.kls.meanRotatedKL + "\t" + r.kls.stdKL + "\t" + r.kls.stdTranslatedKL + "\t" + r.kls.stdScaledKL + "\t" + r.kls.stdRotatedKL );
+        var str = "iterations\t" + r.iterations + "\n" +
+			"samples\t" + r.samples + "\n" +
+			"worldPriorCount\t" + r.worldPriorCount + "\n" +
+			spaceppl.util.objectToString(r.evaluation, spaceppl.util.objectListToTSVString) + "\n";
+        display(str);
 	}, results);
-}*/
+}
 
 var runTrainingExperiment = function(params) {
-	/*display("Making world priors...");
-	var testWorldPriorsCollection = discretePointWorldUniformPriorCollectionInit(params.worldWidth, params.worldHeight, params.possiblePositionCount, params.pointRefs, false, params.worldPriorCount[worldPriorCount.length-1]); 
-	var testWorldPrior = worldPriorsCollection.parameterizedPrior;
-	var testWorldPriorParameters = getCanonicalParameters(worldPriorsCollection.parameterClasses);
-	var TestWorldPrior = worldPriorsCollection.ParameterizedPrior;
-	*/
 	return _.flatten(map(function(iterations) {
 		return map(function(samples) {
 			return map(function(worldPriorCount) {
@@ -32,15 +29,18 @@ var runTrainingExperiment = function(params) {
 				
 				var trainingResults = runTrainingEpisode(localParams);
 				var dists = makeTransformedDistributions(trainingResults, localParams);
-				if (params.evaluation == "KL") {
+				if (params.evaluation == "TA") {
+                    var tas = computeTopAccuracies(dists, trainingResults.utterances, trainingResults.worldPriorParameters);
+                    return { iterations : iterations, samples : samples, worldPriorCount : worldPriorCount, evaluation : tas }
+                } else if (params.evaluation == "KL") {
 					var kls = computeKLs(dists, trainingResults.utterances, trainingResults.worldPriorParameters);
-					return { iterations : iterations, samples : samples, worldPriorCount : worldPriorCount, kls : kls }
+					return { iterations : iterations, samples : samples, worldPriorCount : worldPriorCount, evaluation : kls }
 				} else if (params.evaluation == "KTD") {
 					var ktds = computeKTDs(dists, trainingResults.utterances, trainingResults.worldPriorParameters);
-					return { iterations : iterations, samples : samples, worldPriorCount : worldPriorCount, ktds : ktds }
+					return { iterations : iterations, samples : samples, worldPriorCount : worldPriorCount, evaluation : ktds }
 				} else {
 					var wktds = computeWKTDs(dists, trainingResults.utterances, trainingResults.worldPriorParameters);
-					return { iterations : iterations, samples : samples, worldPriorCount : worldPriorCount, wktds : wktds }
+					return { iterations : iterations, samples : samples, worldPriorCount : worldPriorCount, evaluation : wktds }
 				}
 			}, params.worldPriorCount)
 		}, params.trainingSamplesPerUtteranceWorld)
@@ -55,7 +55,7 @@ var runTrainingEpisode = function(params) {
 	var WorldPrior = worldPriorsCollection.ParameterizedPrior;
 
 	display("Making utterance prior...");
-	var utterancePrior = nearFirstRestUtteranceUniformPrior(params.pointRefs);
+	var utterancePrior = nearUtteranceUniformPrior(params.pointRefs);
 	var utterances = constructSupport(utterancePrior);
 	
 	var nearThresholdPrior = function() { uniformDraw(params.nearThresholds) };
@@ -181,7 +181,7 @@ var computeTopAccuracy = function(trueDist, trainedDist, params0, params1, prod)
 
     var filteredAccs = filter(function (item) { item != undefined }, accs);
 
-    return [listMean(filteredAccs), listStdev(filteredAccs)];
+    return listMean(filteredAccs);
 };
 
 /* FIXME Later

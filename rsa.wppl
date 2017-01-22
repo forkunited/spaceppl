@@ -1,6 +1,6 @@
-var RSA_L = 0;
-var RSA_S = 1;
-var RSA_All = 3;
+var RSA_L = "L";
+var RSA_S = "S";
+var RSA_All = "All";
 
 var makeRSA = function(params, dist, level) {
 	var cacheSize = 10000;
@@ -147,9 +147,9 @@ var makeRSA = function(params, dist, level) {
         },
         level+1);
 
-    if (dist == RSA_L) {
+    if (dist === RSA_L) {
         return dists[level].L
-    } else if (dist == RSA_S) {
+    } else if (dist === RSA_S) {
         return dists[level].S;
     } else {
         return dists;

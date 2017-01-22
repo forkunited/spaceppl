@@ -19,8 +19,8 @@ var DiscretePointWorldUniformGridPrior = function(length, height, pointRefs) {
 var discretePointWorldUniformGridPriorNoReplacementInit = function(length, height, pointRefs, ordered) {
 	return function() {
 		var subset = ordered ?
-			sort(randomSubset(length*height, pointRefs.length))
-			: randomSubset(length*height, pointRefs.length)
+			sort(randomIndexSubset(length*height, pointRefs.length))
+			: randomIndexSubset(length*height, pointRefs.length)
 		var points = map(function(pointIndex) { return [Math.floor(pointIndex/length), pointIndex % length] }, subset);
 		return _.object(pointRefs, points);
 	}
@@ -55,10 +55,7 @@ var discretePointWorldUniformPriorInit = function(length, height, possibleLocati
 
 var discretePointWorldUniformPriorInitFromLocations = function(possibleLocations, pointRefs, ordered) {
 	return function() {
-		var subset = ordered ?
-			sort(randomSubset(possibleLocations.length, pointRefs.length))
-			: randomSubset(possibleLocations.length, pointRefs.length);
-		var points = map(function(pointIndex) { return possibleLocations[pointIndex] }, subset);
+		var points = randomSubset(possibleLocations, pointRefs.length, ordered);
 		return _.object(pointRefs, points);
 	}
 }
@@ -188,55 +185,6 @@ var transformParameterizedPrior = function(fn, ParameterizedPrior, parameters) {
 	}
 }
 
-/*
- * Random subset helper function
- */
-
-var randomSubset = function(n, k) {
-	var randomSubsetHelper = function(subset, possible) {
-		var nextIndex = randomInteger(possible.length);
-		var nextVal = possible[nextIndex];
-		var nextPossible = _.without(possible, nextVal);
-		var nextSubset = _.union(subset, [nextVal]);
-
-
-		if (nextSubset.length == k) {
-			return nextSubset;
-		} else {
-			return randomSubsetHelper(nextSubset, nextPossible); 
-		}
-	};
-
-	return randomSubsetHelper([], _.range(n));
-}
-
-/*
- * Old slow version of random subset that relies on shuffling
- */
-
-var randomSubsetShuffle = function(n, k) {
-	var perm = shuffle(n);
-	return _.initial(perm, n-k);
-}
-
-var shuffle = function(n) {
-	var perm = _.range(n);	
-	return shuffleHelper(n-1, perm);
-}
-
-var shuffleHelper = function(i, perm) {
-	if (i == 0)
-		return perm
-	else {
-		var temp = perm[i];
-		var swap = randomInteger(i+1);
-		return shuffleHelper(i - 1, mapIndexed(function(index, element) { 
-							return index == i ? perm[swap] : 
-								(index == swap ? temp : 
-									perm[index]) 
-							}, perm))
-	}
-}
 
 /*
  * World transformation functions

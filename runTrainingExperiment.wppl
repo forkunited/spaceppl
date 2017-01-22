@@ -1,0 +1,26 @@
+//  --rsaDist S --rsaTrainingLevel 2 --trainingSamplesPerUtteranceWorld 50 --trainingIterations 1500 --worldPriorCount 20 --random-seed 1
+
+var args = parseArgs();
+
+var params = {
+	rsaDist : args["rsaDist"],
+	rsaTrainingLevel : args["rsaTrainingLevel"]*1,
+	rsaEvaluationLevel : 3,
+	alpha : 1,
+	trainingSamplesPerUtteranceWorld :  [args["trainingSamplesPerUtteranceWorld"]*1], //[25,100,150,200,1000],//[15] works,//[25,50,100,150,200],  // Want 1000 per utterance (then give 200 here if 5 world priors)
+	trainingIterations : [args["trainingIterations"]*1], // 1500, //[300] works
+	trainingGradientSamples : 1,
+	pointRefs : ["p1","p2","p3"], //, "p4", "p5", "p6"];
+	worldWidth : 3,
+	worldHeight : 3,
+	possiblePositionCount : 3, //3 //6; (120 possible worlds)
+	worldPriorCount : [args["worldPriorCount"]*1],// works [10,20,30,40,50],//[20,40,60], //5
+	nearThresholds : [1,10],
+	nearVagueness : .05,
+	evaluation : "TA"
+}
+
+var results = runTrainingExperiment(params);
+display("seed\t" + args["random-seed"]);
+display("training dist\t" + args["rsaDist"] + args["rsaTrainingLevel"]);
+outputTrainingResults(results);

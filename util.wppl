@@ -21,3 +21,85 @@ var constructSupport = function(dist, parameters) {
     }
 }
 
+var parseArgs = function() {
+	var args = process.argv;
+	var keyValues = mapN(function(index) {
+		if (index != args.length - 1 && args[index].startsWith("--")) {
+			return [args[index].substring(2,args[index].length), args[index + 1]];
+		} else {
+			return undefined
+		} 
+	}, args.length);
+
+	var keyValuesFiltered = filter(function(keyValue) {
+		return keyValue != undefined;
+	}, keyValues);
+
+	return _.object(keyValuesFiltered);
+}
+
+/*
+ * Random subset helper function
+ */
+
+var randomSubset = function(l, k, ordered) {
+    var subset = ordered ? sort(randomIndexSubset(l.length, k)) : randomIndexSubset(l.length, k);
+    var points = map(function(index) { return l[index] }, subset);
+    return points;
+}
+
+var randomIndexSubset = function(n, k) {
+    var randomIndexSubsetHelper = function(subset, possible) {
+        var nextIndex = randomInteger(possible.length);
+        var nextVal = possible[nextIndex];
+        var nextPossible = _.without(possible, nextVal);
+        var nextSubset = _.union(subset, [nextVal]);
+
+
+        if (nextSubset.length == k) {
+            return nextSubset;
+        } else {
+            return randomIndexSubsetHelper(nextSubset, nextPossible);
+        }
+    };
+
+    return randomIndexSubsetHelper([], _.range(n));
+}
+
+/*
+ * Old slow version of random subset that relies on shuffling
+ */
+
+var randomIndexSubsetShuffle = function(n, k) {
+    var perm = shuffleIndex(n);
+    return _.initial(perm, n-k);
+}
+
+var shuffleIndex = function(n) {
+    var perm = _.range(n);
+    return shuffleIndexHelper(n-1, perm);
+}
+
+var shuffleIndexHelper = function(i, perm) {
+    if (i == 0)
+        return perm
+    else {
+        var temp = perm[i];
+        var swap = randomInteger(i+1);
+        return shuffleIndexHelper(i - 1, mapIndexed(function(index, element) {
+            return index == i ? perm[swap] :
+                (index == swap ? temp :
+                    perm[index])
+        }, perm))
+    }
+}
+
+/* String stuff */
+
+var strProduct = function(strList1, strList2, midStr, endStr) {
+    return _.flatten(map(function(str1) {
+        return map(function(str2) {
+            return str1 + midStr + str2 + endStr
+        }, strList2)
+    }, strList1));
+}
