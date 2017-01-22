@@ -25,10 +25,35 @@ def process_tsv_file(file_path):
 def process_messy_file(file_path):
     record = dict()
     f = open(file_path, 'rt')
+    cur_prefix = ""
+    cur_state = 0
     try:
         for line in f:
             if line.startswith("seed"):
-                record["seed"] = line.split("\t")[1] 
+                record["seed"] = line.split("\t")[1]
+            elif line.startswith("training dist"):
+                record["dist"] = line.split("\t")[1]
+            elif line.startswith("iterations"):
+                record["iterations"] = line.split("\t")[1]
+            elif line.startswith("samples"):
+                record["samples"] = line.split("\t")[1]
+            elif line.startswith("worldPriorCount"):
+                record["priors"] = line.split("\t")[1]
+            elif line.startswith("Default") or line.startswith("Translated") or line.startswith("Scaled") or line.startswith("Rotated"):
+                cur_prefix = line.trim()
+                cur_state = 1
+            elif cur_state == 1:
+                cur_state = cur_state + 1
+            elif cur_state > 1:
+                line_parts = line.split("\t")
+                level = line_parts[1]
+                accL = line_parts[2]
+                accS = line_parts[3]
+
+                record["L" + level + " " + cur_prefix + " Accuracy"] = accL
+                record["S" + level + " " + cur_prefix + " Accuracy"] = accS
+                if cur_state == 5:
+                    cur_state = 0
     finally:
         f.close()
     return [record]
