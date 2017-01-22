@@ -30,30 +30,32 @@ def process_messy_file(file_path):
     try:
         for line in f:
             if line.startswith("seed"):
-                record["seed"] = line.split("\t")[1]
+                record["seed"] = line.split("\t")[1].strip()
             elif line.startswith("training dist"):
-                record["dist"] = line.split("\t")[1]
+                record["dist"] = line.split("\t")[1].strip()
             elif line.startswith("iterations"):
-                record["iterations"] = line.split("\t")[1]
+                record["iterations"] = line.split("\t")[1].strip()
             elif line.startswith("samples"):
-                record["samples"] = line.split("\t")[1]
+                record["samples"] = line.split("\t")[1].strip()
             elif line.startswith("worldPriorCount"):
-                record["priors"] = line.split("\t")[1]
+                record["priors"] = line.split("\t")[1].strip()
             elif line.startswith("Default") or line.startswith("Translated") or line.startswith("Scaled") or line.startswith("Rotated"):
-                cur_prefix = line.trim()
+                cur_prefix = line.strip()
                 cur_state = 1
             elif cur_state == 1:
                 cur_state = cur_state + 1
             elif cur_state > 1:
                 line_parts = line.split("\t")
-                level = line_parts[1]
-                accL = line_parts[2]
-                accS = line_parts[3]
-
-                record["L" + level + " " + cur_prefix + " Accuracy"] = accL
-                record["S" + level + " " + cur_prefix + " Accuracy"] = accS
+                level = line_parts[1].strip()
+                accL = line_parts[2].strip()
+                accS = line_parts[3].strip()
+                
+                record["L" + level + " " + cur_prefix + " Evaluation"] = accL
+                record["S" + level + " " + cur_prefix + " Evaluation"] = accS
                 if cur_state == 5:
                     cur_state = 0
+                else:
+                    cur_state = cur_state + 1
     finally:
         f.close()
     return [record]
