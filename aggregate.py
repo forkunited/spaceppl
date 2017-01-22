@@ -11,7 +11,6 @@ input_file_type = sys.argv[2]
 output_file_path = sys.argv[3]
 
 def process_tsv_file(file_path):
-    record = dict()
     f = open(file_path, 'rt')
     rows = []
     try:
@@ -20,14 +19,21 @@ def process_tsv_file(file_path):
             rows.append(row)
     finally:
         f.close()
-    return row
+    return rows
 
 
 def process_messy_file(file_path):
-    pass
+    record = dict()
+    f = open(file_path, 'rt')
+    try:
+        for line in f:
+            if line.startswith("seed"):
+                record["seed"] = line.split("\t")[1] 
+    finally:
+        f.close()
+    return [record]
 
 def output_tsv(file_path, rows):
-    print(rows)
     fields = OrderedDict([(k, None) for k in rows[0].keys()])
     f = open(file_path, 'wb')
     try:
