@@ -63,7 +63,7 @@ def output_record_files(D):
         for record_key in record_keys: # A record key is usually the number for a round
             record = dict()
             record[record_groupby] = int(record_key)
-            record["events"] = sorted([records[record_key], key=lambda x: x["time"]])]
+            record["events"] = sorted(records[record_key], key=lambda x: x["time"])
             records_list.append(record)
         document_obj = dict()
         document_obj[document_groupby] = key
