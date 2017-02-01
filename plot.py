@@ -1,4 +1,20 @@
 #!/usr/bin/python
+#
+# Usage: plot.py [input_file] [output_file] [xlabel] [ylabel] [x] [y] [where] [where_values] [groupby]
+#
+# input_file: Input tsv file where the first row contains column names
+# xlabel: Label for plot horizontal axis
+# ylabel: Label for plot vertical axis
+# x: Name of column to plot on horizontal axis
+# y: Name of column to plot on vertical axis
+# where: Comma-separated list of columns for which to constrain the values contained in the plot
+# where_values: Comma-separated list of values by which to constrain the columns given in [where]
+# groupby: Comma-separated list of columns on which to group the data into separate curves
+#
+# The script will generate a 2-dimensional plot containing a set of curves.  Values are averaged
+# across rows of data that fit the constraints given in [where] and [where_values].  The averages
+# are computed for separate curves determined by the [groupby]
+#
 
 import csv
 import sys
@@ -7,14 +23,13 @@ from scipy import stats
 from random import randint
 
 input_file = sys.argv[1]
-output_file = sys.argv[2]
-xlabel = sys.argv[3]
-ylabel = sys.argv[4]
-x = sys.argv[5]
-y = sys.argv[6]
-where = sys.argv[7].split(",")
-where_values = sys.argv[8].split(",")
-groupby = sys.argv[9].split(",")
+xlabel = sys.argv[2]
+ylabel = sys.argv[3]
+x = sys.argv[4]
+y = sys.argv[5]
+where = sys.argv[6].split(",")
+where_values = sys.argv[7].split(",")
+groupby = sys.argv[8].split(",")
 
 def read_tsv_file(file_path):
     f = open(file_path, 'rt')
