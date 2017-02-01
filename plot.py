@@ -2,6 +2,7 @@
 
 import csv
 import sys
+import numpy as np
 from scipy import stats
 from random import randint
 
@@ -30,15 +31,15 @@ def read_tsv_file(file_path):
 def row_match(row, where, where_values):
     for i in range(len(where)):
         if row[where[i]] != where_values[i]:
-            return false
-    return true
+            return False
+    return True
 
 
 # Map [groupby],x -> y value list filtered by 'where'
 def aggregate(rows, x, y, where, where_values, groupby):
     agg = dict()
     for row in rows:
-        if !row_match(row, where, where_values):
+        if not row_match(row, where, where_values):
             continue
         cur_agg = agg
         for key in groupby:
@@ -60,7 +61,7 @@ def compute_statistics_helper(agg, agg_depth, keys, statistics, overall_statisti
             if key not in statistics:
                 cur_stats[key] = dict()
             cur_stats = cur_stats[key]
-        cur_stats["mu"] = stats.mean(agg)
+        cur_stats["mu"] = np.mean(agg)
         cur_stats["stderr"] = stats.sem(agg)
         overall_statistics["y_max"] = max(overall_statistics["y_max"], cur_stats["mu"])
         overall_statistics["x_max"] = max(overall_statistics["x_max"], float(keys[len(keys) - 1]))
@@ -80,51 +81,55 @@ def compute_statistics(agg, groupby):
     return compute_statistics_helper(agg, len(groupby) + 1, [], statistics, overall_statistics)
 
 
-def make_latex_plot_helper(statistics, groupby, depth, keys, str):
+def make_latex_plot_helper(statistics, groupby, depth, keys, s):
     if depth == 0:
-        plot_str = "\addplot[color=black!" + randint(0,100) + ",dash pattern=on " + randint(1,3) + "pt off " + randint(1,3) + "px] coordinates {\n"
+        plot_str = "\\addplot[color=black!" + str(randint(30,100)) + ",dash pattern=on " + str(randint(1,3)) + "pt off " + str(randint(1,2)) + "pt,error bars/.cd, y dir=both,y explicit] coordinates {\n"
 
-        for x_value in statistics:
-            plot_str = plot_str + "(" + x_value + "," + statistics[x_value]["mu"] + ")+-(0.0," + statistics[x_value]["stderr"] + ")\n"
+	x_values = [float(x_value) for x_value in statistics.keys()]
+	x_values.sort()
+        for x_value in x_values:
+	    x_str = str(int(x_value))
+            plot_str = plot_str + "(" + x_str + "," + str(statistics[x_str]["mu"]) + ")+-(0.0," + str(statistics[x_str]["stderr"]) + ")\n"
 
         plot_str = plot_str + "};\n"
-        plot_str = plot_str + "\addlegendentry{\tiny{"
+        plot_str = plot_str + "\\addlegendentry{\\tiny{"
         for i in range(len(groupby)):
             plot_str = plot_str + groupby[i] + "=" + keys[i] + " "
+	plot_str = plot_str.strip()
         plot_str = plot_str + "}};\n\n"
 
         return plot_str
     else:
         for key in statistics:
             keys.append(key)
-            str = str + make_latex_plot_helper(statistics[key], groupby, depth - 1, keys, str)
+            s = s + make_latex_plot_helper(statistics[key], groupby, depth - 1, keys, s)
             keys.pop()
-    return str
+    return s
 
 
 def make_latex_plot(statistics, overall_statistics, xlabel, ylabel, groupby):
-    str = ("\begin{figure*}[ht]\n"
-           "\begin{center}\n"
-           "\begin{tikzpicture}\n"
-           "\begin{axis}[%\n"
-           "width=.5\textwidth,height=.5\textwidth,\n"
+    s = ("\\begin{figure*}[ht]\n"
+           "\\begin{center}\n"
+           "\\begin{tikzpicture}\n"
+           "\\begin{axis}[%\n"
+           "width=.5\\textwidth,height=.5\\textwidth,\n"
            "anchor=origin, % Shift the axis so its origin is at (0,0)\n"
-           "ymin=0,ymax=" + overall_statistics["y_max"] + ",xmin=0,xmax=" + overall_statistics["x_max"] + ",%\n"
+           "ymin=0,ymax=" + str(overall_statistics["y_max"]) + ",xmin=0,xmax=" + str(overall_statistics["x_max"]) + ",%\n"
            "xlabel=" + xlabel + ",\n"
            "ylabel=" + ylabel + ",\n"
            "legend pos=outer north east\n"
            "]\n"
     )
 
-    str = str + make_latex_plot_helper(statistics, groupby, len(groupby), [], "")
+    s = s + make_latex_plot_helper(statistics, groupby, len(groupby), [], "")
 
-    str = str + ("\end{axis}\n"
-                 "\end{tikzpicture}\n"
-                 "\end{center}\n"
-                 "\end{figure*}\n"
+    s = s + ("\\end{axis}\n"
+                 "\\end{tikzpicture}\n"
+                 "\\end{center}\n"
+                 "\\end{figure*}\n"
     )
 
-    return str
+    return s
 
 
 rows = read_tsv_file(input_file)
