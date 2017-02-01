@@ -85,8 +85,8 @@ def annotate_text(text):
                 s_lemmas.append(token['lemma'])
                 s_pos.append(token['pos'])
             words.append(s_words)
-            words.append(s_lemmas)
-            words.append(s_pos)
+            lemmas.append(s_lemmas)
+            pos.append(s_pos)
 
         anno_obj = dict()
         anno_obj["words"] = words
@@ -97,6 +97,13 @@ def annotate_text(text):
     except Exception as e:
         print text
         raise
+
+def output_obj(file_path, obj):
+    f = open(file_path, 'w')
+    try:
+        f.write(json.dumps(obj))
+    finally:
+        f.close()
 
 def output_record_files(D):
     for key in D:
@@ -111,31 +118,6 @@ def output_record_files(D):
         document_obj = dict()
         document_obj[document_groupby] = key
         document_obj["records"] = records_list
-        print json.dumps(document_obj)
+        output_obj(output_dir + "/" + key, document_obj)
 
 output_record_files(process_csv_files())
-
-################
-# On output remember to sort by time
-#def output_tsv(file_path, rows):
-#    fields = OrderedDict([(k, None) for k in rows[0].keys()])
-#    f = open(file_path, 'wb')
-#    try:
-#        writer = csv.DictWriter(f, delimiter='\t', fieldnames=fields)
-#        writer.writeheader()
-#        for row in rows:
-#            writer.writerow(row)
-#    finally:
-#        f.close()
-#
-#def aggregate_directory(file_dir, file_type):
-#    files = [f for f in listdir(file_dir) if isfile(join(file_dir, f))]
-#    rows = []
-#    for file in files:
-#       if file_type == 'MESSY':
-#            rows.extend(process_messy_file(join(file_dir, file)))
-#        else:
-#            rows.extend(process_tsv_file(join(file_dir, file)))
-#    return rows
-
-#output_tsv(output_file_path, aggregate_directory(input_file_dir, input_file_type))
