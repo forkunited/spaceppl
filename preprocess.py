@@ -67,8 +67,8 @@ def output_record_files(D):
             records_list.append(record)
         document_obj = dict()
         document_obj[document_groupby] = key
-        document_object["records"] = records_list
-        print json.dumps(document_object)
+        document_obj["records"] = records_list
+        print json.dumps(document_obj)
 
 output_record_files(process_csv_files())
 
@@ -95,4 +95,4 @@ output_record_files(process_csv_files())
 #            rows.extend(process_tsv_file(join(file_dir, file)))
 #    return rows
 
-output_tsv(output_file_path, aggregate_directory(input_file_dir, input_file_type))
+#output_tsv(output_file_path, aggregate_directory(input_file_dir, input_file_type))
