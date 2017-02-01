@@ -55,7 +55,8 @@ def process_record(record, D, record_type):
 
 
 def annotate_record(record):
-    record[annotation_field + "_" + "anno"] = annotate_text(record[annotation_field])
+    if annotation_field in record:
+        record[annotation_field + "_" + "anno"] = annotate_text(record[annotation_field])
 
 # Borrowed from https://github.com/futurulus/coop-nets/blob/master/behavioralAnalysis/tagPOS.ipynb
 def annotate_text(text):
