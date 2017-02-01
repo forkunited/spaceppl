@@ -3,6 +3,11 @@
 import csv
 import sys
 import json
+from pycorenlp import StanfordCoreNLP
+
+STANFORD_NLP_PORT = 9000
+
+nlp = StanfordCoreNLP('http://localhost:{}'.format(STANFORD_NLP_PORT))
 
 document_groupby = sys.argv[1]
 record_groupby = sys.argv[2]
@@ -17,7 +22,6 @@ def process_csv_files():
         process_csv_file(input_files[i], D, input_file_types[i])
     return D
 
-
 def process_csv_file(file_path, D, file_type):
     f = open(file_path, 'rt')
     try:
@@ -27,7 +31,6 @@ def process_csv_file(file_path, D, file_type):
     finally:
         f.close()
     return D
-
 
 def process_record(record, D, record_type):
     D_sub = D
@@ -52,8 +55,47 @@ def process_record(record, D, record_type):
 
 
 def annotate_record(record):
-    pass
+    record[annotation_field + "_" + "anno"] = annotate_text(record[annotation_field])
 
+# Borrowed from https://github.com/futurulus/coop-nets/blob/master/behavioralAnalysis/tagPOS.ipynb
+def annotate_text(text):
+    if not isinstance(text, basestring):
+        print '%s: %s' % (type(text), str(text))
+    try:
+        if text.strip() == '':
+            return []
+
+        #text = str(text)
+        ann = nlp.annotate(
+            text,
+            properties={'annotators': 'pos,lemma',
+                        'outputFormat': 'json'})
+        words = []
+        lemmas = []
+        pos = []
+        if isinstance(ann, basestring):
+            ann = json.loads(ann.replace('\x00', '?').encode('latin-1'), encoding='utf-8', strict=True)
+        for sentence in ann['sentences']:
+            s_words = []
+            s_lemmas = []
+            s_pos = []
+            for token in sentence['tokens']:
+                s_words.append(token['word'])
+                s_lemmas.append(token['lemma'])
+                s_pos.append(token['pos'])
+            words.append(s_words)
+            words.append(s_lemmas)
+            words.append(s_pos)
+
+        anno_obj = dict()
+        anno_obj["words"] = words
+        anno_obj["lemmas"] = lemmas
+        anno_obj["pos"] = pos
+
+        return anno_obj
+    except Exception as e:
+        print text
+        raise
 
 def output_record_files(D):
     for key in D:
