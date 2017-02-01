@@ -1,4 +1,5 @@
-var outputTrainingResults = function(results) {
+/* @deprecated */
+var outputMessyTrainingResults = function(results) {
 	return map(function(r) {
         var str = "iterations\t" + r.iterations + "\n" +
 			"samples\t" + r.samples + "\n" +
@@ -6,6 +7,17 @@ var outputTrainingResults = function(results) {
 			spaceppl.util.objectToString(r.evaluation, spaceppl.util.objectListToTSVString) + "\n";
         display(str);
 	}, results);
+}
+
+var outputTrainingResults = function(results) {
+    return map(function(r) {
+    	var str = "RESULTS\niterations\tsamples\tworldPriorCount\t" + map(evaluation)
+        var str = "iterations\t" + r.iterations + "\n" +
+            "samples\t" + r.samples + "\n" +
+            "worldPriorCount\t" + r.worldPriorCount + "\n" +
+            spaceppl.util.objectToString(r.evaluation, spaceppl.util.objectListToTSVString) + "\n";
+        display(str);
+    }, results);
 }
 
 var runTrainingExperiment = function(params) {
@@ -184,6 +196,20 @@ var computeTopAccuracy = function(trueDist, trainedDist, params0, params1, prod)
     return listMean(filteredAccs);
 };
 
+var computeMAUC = function(trueDist, trainedDist, params0, params1, prod) {
+    var mapFn = (prod) ? mapProduct : map2;
+
+    var ps = mapFn(function(param0, param1) {
+        return trueDist(param0,param1);
+    }, params0, params1);
+
+    var p_hats = mapFn(function(param0, param1) {
+        return trainedDist(param0,param1);
+    }, params0, params1);
+
+    return spaceppl.util.MAUC(p_hats, ps);
+};
+
 /* FIXME Later
 var computeKTD = function(trueDist, trainedDist, params0, params1) {
 	var ktds = mapProduct(function(param0, param1) {
@@ -232,6 +258,23 @@ var computeTopAccuracies = function(dists, utterances, worldPriorParameters) {
             var acc_L = computeTopAccuracy(trueS, trainedS, lds.worldsAndParameters[0], lds.worldsAndParameters[1], false);
 
             return { level : level, Accuracy_L : acc_L, Accuracy_S : acc_S };
+        }, lds.gold, lds.trained);
+    }, dists);
+}
+
+var computeMAUCs = function(dists, utterances, worldPriorParameters) {
+    return mapObject(function(transKey, lds) {
+        return map2(function(ldGold, ldTrained) {
+            var trueL = ldGold.L;
+            var trueS = ldGold.S;
+            var trainedL = ldTrained.L;
+            var trainedS = ldTrained.S;
+            var level = ldGold.l;
+
+            var mauc_S = computeMAUC(trueL, trainedL, utterances, worldPriorParameters, true);
+            var mauc_L = computeMAUC(trueS, trainedS, lds.worldsAndParameters[0], lds.worldsAndParameters[1], false);
+
+            return { level : level, MAUC_L : mauc_L, MAUC_S : mauc_S };
         }, lds.gold, lds.trained);
     }, dists);
 }

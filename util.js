@@ -1,5 +1,17 @@
 var _ = require("underscore");
 
+var areDisjoint = function(l1, l2) {
+    return _.some(mapProduct(function(v1, v2) {
+        return _.isEqual(v1, v2);
+    }, l1, l2)) ? false : true;
+}
+
+var getDimension = function(points, index) {
+	return _.map(points, function(point) {
+		return point[index]
+	});
+}
+
 var round = function(value, place) {
 	if (place) {
 		return Math.round(value*Math.pow(10,place))/(Math.pow(10,place));
@@ -16,6 +28,19 @@ var distToObject = function(dist, roundPlace) {
 
 var distToArray = function(dist, round) {
 	return _.pairs(distToObject(dist, round)).sort(function(p1, p2) { return p1[1] === p2[1] ? 0 : p1[1] < p2[1] ? 1 : -1 });
+}
+
+var fullSupport = function(ps) {
+    return objectFullSupport(_.map(ps, function(p) { return distToObject(p) }));
+}
+
+var arrayFullSupport = function(ps) {
+    return objectFullSupport(_.map(ps, function(p) { return _.object(p) }));
+}
+
+var objectFullSupport = function(ps) {
+    var supports = _.map(ps, function(p) { return _.keys(p)});
+    return _.reduce(supports, function(acc, p) { return _.union(acc, p) }, []);
 }
 
 var unifySupport = function(p, q) {
@@ -39,6 +64,21 @@ var objectUnifySupport = function(p, q) {
 	return [newP,newQ];
 }
 
+var modes = function(p) {
+	return objectModes(distToObject(p));
+}
+
+var arrayModes = function(p) {
+	return objectModes(_.object(p));
+}
+
+var objectModes = function(p) {
+    var pList = _.pairs(p);
+    var pSorted = _.sortBy(pList, function(v){ return -v[1]; });
+    var pTop = _.filter(pSorted, function(v) { return v[1] == pSorted[0][1] });
+	return getDimension(pTop, 0);
+}
+
 var topMatch = function(p, q) {
     return objectTopMatch(distToObject(p), distToObject(q));
 }
@@ -48,18 +88,55 @@ var arrayTopMatch = function(p, q) {
 }
 
 var objectTopMatch = function(p, q) {
-	var pList = _.pairs(p);
-	var qList = _.pairs(q);
+	var pModes = objectModes(p);
+	var qModes = objectModes(q);
+	return areDisjoint(pModes, qModes) ? 0.0 : 1.0;
+}
 
-	var pSorted = _.sortBy(pList, function(v){ return -v[1]; });
-    var qSorted = _.sortBy(qList, function(v){ return -v[1]; });
+var MAUC = function(p_hats, ps) {
+    var op_hats = _.map(p_hats, function (p_hat) { return distToObject(p) });
+    var ops = _.map(ps, function (p) { return distToObject(p) });
 
-	var pTop = _.filter(pSorted, function(v) { return v[1] == pSorted[0][1] });
-    var qTop = _.filter(qSorted, function(v) { return v[1] == qSorted[0][1] });
+	var A_hat_cond = function (c_i, c_j) {
+		var num = 0.0;
+		var den = 0.0;
+		for (var x_j = 0; x_j < ops.length; x_j++) {
+			var op_hat_j = op_hats[x_j];
+			var op_j = ops[x_j];
+			if (_.contains(objectModes(op_j), c_j)) {
+				for (var x_i = 0; x_i < ops.length; x_j++) {
+					var op_hat_i = op_hats[x_i];
+					var op_i = ops[x_i];
+					if (_.contains(objectModes(op_i, c_i))) {
+						// Randomly drawn true class j has estimated est_ji = p_j(c_i) less than
+						// est_ii=p_i(c_i) for randomly drawn true class i
+						var est_ji = _.contains(op_hat_j, c_i) ? op_hat_j[c_i] : 0.0;
+						var est_ii = _.contains(op_hat_i, c_i) ? op_hat_i[c_i] : 0.0;
 
-    return _.some(mapProduct(function(v1, v2) {
-    	return _.isEqual(v1[0], v2[0]);
-    }, pTop, qTop)) ? 1 : 0;
+						num += (est_ji < est_ii) ? 1.0 : 0.0;
+						den += 1.0;
+					}
+				}
+			}
+		}
+
+		return num/den;
+    };
+
+    var A_hat = function (c_i, c_j) {
+        return (A_hat_cond(c_i, c_j) + A_hat_cond(c_j, c_i)) / 2.0;
+    };
+
+    var classes = _.union(objectFullSupport(op_hats), objectFullSupport(ops));
+    var sumA = 0.0;
+    var c = classes.length;
+    for (var i = 0; i < c; i++) {
+        for (var j = i + 1; j < c; j++) {
+            sumA = sumA + A_hat(classes[i], classes[j]);
+        }
+    }
+
+    return (2.0 / (c * (c - 1.0))) * sumA;
 }
 
 var KL = function(p, q) {
@@ -196,13 +273,22 @@ var objectToString = function(obj, valueToStringFn) {
 }
 
 module.exports = {
+	areDisjoint : areDisjoint,
+	getDimension : getDimension,
 	round : round,
 	distToArray : distToArray,
 	distToObject : distToObject,
+    MAUC : MAUC,
+	objectFullSupport : objectFullSupport,
+	arrayFullSupport : arrayFullSupport,
+	fullSupport : fullSupport,
+	objectModes : objectModes,
+	arrayModes : arrayModes,
+	modes : modes,
 	KL : KL,
-	objectKL : objectKL,
-	arrayKL : arrayKL,
-    	topMatch : topMatch,
+    objectKL : objectKL,
+    arrayKL : arrayKL,
+	topMatch : topMatch,
 	objectTopMatch : objectTopMatch,
 	arrayTopMatch : arrayTopMatch,
 	unifySupport : unifySupport,
