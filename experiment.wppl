@@ -118,7 +118,23 @@ var makeTransformedDistributions = function(trainingResults, params) {
 	var translatedWorldPrior = function(param) { return sample(TranslatedWorldPrior(param)) };
 	var scaledWorldPrior = function(param) { return sample(ScaledWorldPrior(param)) };
 	var rotatedWorldPrior = function(param) { return sample(RotatedWorldPrior(param)) };
-	
+
+	/* FIXME
+    var parameters = {
+        worldPrior : worldPrior,
+        utterancePrior : utterancePrior,
+        nearThresholdPrior : nearThresholdPrior,
+        alpha : alpha,
+        nearVagueness : nearVagueness,
+	 nearPointsNetworkParametersPrior;
+    };
+
+	 {iterations,
+	 samplesPerInput,
+	 gradientSamples,
+	 observations,
+	 batchSize}*/
+
 	var translatedRsa = makeSpatialRSA(RSA_All, params.rsaEvaluationLevel, params.alpha, translatedWorldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness);
 	var scaledRsa = makeSpatialRSA(RSA_All, params.rsaEvaluationLevel, params.alpha, scaledWorldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness);
 	var rotatedRsa = makeSpatialRSA(RSA_All, params.rsaEvaluationLevel, params.alpha, rotatedWorldPrior, utterancePrior, nearThresholdPrior, params.nearVagueness);
@@ -167,66 +183,6 @@ var displayDistributions = function(dists, utterance, worldSampleIndex) {
 		}, lds.gold, lds.trained);
 	}, dists);
 }
-
-var computeKL = function(trueDist, trainedDist, params0, params1, prod) {
-    var mapFn = (prod) ? mapProduct : map2;
-
-	var kls = mapFn(function(param0, param1) {
-		var kl = spaceppl.util.KL(trueDist(param0,param1), trainedDist(param0,param1));
-		if (0 <= kl)
-			return kl;
-		else
-			return undefined;
-	}, params0, params1);
-
-	var filteredKLs = filter(function (item) { item != undefined }, kls);
-	
-	return [listMean(filteredKLs), listStdev(filteredKLs)];
-};
-
-var computeTopAccuracy = function(trueDist, trainedDist, params0, params1, prod) {
-    var mapFn = (prod) ? mapProduct : map2;
-
-    var accs = mapFn(function(param0, param1) {
-        return spaceppl.util.topMatch(trueDist(param0,param1), trainedDist(param0,param1));
-    }, params0, params1);
-
-    var filteredAccs = filter(function (item) { item != undefined }, accs);
-
-    return listMean(filteredAccs);
-};
-
-var computeMAUC = function(trueDist, trainedDist, params0, params1, prod) {
-    var mapFn = (prod) ? mapProduct : map2;
-
-    var ps = mapFn(function(param0, param1) {
-        return trueDist(param0,param1);
-    }, params0, params1);
-
-    var p_hats = mapFn(function(param0, param1) {
-        return trainedDist(param0,param1);
-    }, params0, params1);
-
-    return spaceppl.util.MAUC(p_hats, ps);
-};
-
-/* FIXME Later
-var computeKTD = function(trueDist, trainedDist, params0, params1) {
-	var ktds = mapProduct(function(param0, param1) {
-			return spaceppl.util.kendallTauDistance(trueDist(param0, param1), trainedDist(param0, param1));
-	}, params0, params1)
-
-	return [listMean(ktds), listStdev(ktds)];
-};
-
-var computeWKTD = function(trueDist, trainedDist, params0, params1) {
-	var ktds = mapProduct(function(param0, param1) {
-			return spaceppl.util.weightedKendallTauDistance(trueDist(param0, param1), trainedDist(param0, param1));
-	}, params0, params1)
-
-	return [listMean(ktds), listStdev(ktds)];
-};
-*/
 
 var computeKLs = function(dists, utterances, worldPriorParameters) {
     return mapObject(function(transKey, lds) {

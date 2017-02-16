@@ -4,5 +4,53 @@
 //display(randomSubset(refMentions, 2, true));
 //display(makeUtterances([["spaceppl.space.near"], [2, true, refMentions]]));
 
-var args = parseArgs();
-display(args["out"]);
+//var args = parseArgs();
+//display(args["out"]);
+
+//var f = function() {
+//    display(arguments[0] + " " + arguments[1]);
+//}
+//f("hi", "bye");
+
+/* Put this back "learn.wppl", "world.wppl", "utterance.wppl", "rsa.wppl", "spatialRsa.wppl", "util.wppl", "experiment.wppl"*/
+
+//spaceppl.rgame.getGameUtteranceActionPairs(spaceppl.rgame.readGame("output/4791-d"), spaceppl.rgame.senders.SPEAKER);
+
+//spaceppl.feature.initFeatureUtteranceTokenAnnotation();
+
+/*
+var c = spaceppl.counter.init();
+spaceppl.counter.increment(c, "hi");
+spaceppl.counter.increment(c, "hi");
+spaceppl.counter.increment(c, "hi");
+spaceppl.counter.increment(c, "hi");
+spaceppl.counter.increment(c, "bye");
+spaceppl.counter.increment(c, "bye");
+spaceppl.counter.increment(c, "by");
+spaceppl.counter.increment(c, "t");
+
+spaceppl.counter.removeLessThan(c, 2);
+spaceppl.counter.increment(c, "new");
+spaceppl.counter.increment(c, "dog");
+spaceppl.counter.increment(c, "dog");
+spaceppl.counter.increment(c, "dog");
+spaceppl.counter.increment(c, "dog");
+
+spaceppl.counter.increment(c, "zog");
+spaceppl.counter.increment(c, "zog");
+spaceppl.counter.increment(c, "zog");
+spaceppl.counter.increment(c, "zog");
+
+display(spaceppl.counter.getSortedCounts(c));
+display(spaceppl.counter.getTop(c, 4));
+display(spaceppl.counter.buildIndex(c));
+
+var bi = spaceppl.bilookup.init(spaceppl.counter.buildIndex(c));
+spaceppl.bilookup.save(bi, "output/testbi");
+var lbi = spaceppl.bilookup.load("output/testbi"); //"output/testbi");
+display(bi);
+display("l");
+display(lbi);
+*/
+
+spaceppl.feature.initFeatureSet("test", inputGameDirectory, utteranceFn, actionFn, featureTypes, vector);

@@ -1,50 +1,51 @@
-var makeData = function(distribution, samplesPerInput, possibleInputs0, possibleInputs1, allInputPairs) {
-	if (possibleInputs1 != undefined && allInputPairs) {
-        return _.flatten(
-            map(function (input) {
-                return map(function (input1) {
-                    var dist = distribution(input, input1);
-                    return repeat(samplesPerInput, function () {
-						/*display(input);
-						 display(input1);
-						 display(dist);*/
-                        return {input: input, input1: input1, output: sample(dist)};
-                    });
-                }, possibleInputs1);
-            }, possibleInputs0),
-            false);
-    } else if (possibleInputs1 != undefined && !allInputPairs) {
-        return _.flatten(
-            map2(function(input, input1) {
-                    var dist = distribution(input, input1);
-                    return repeat(samplesPerInput, function() {
-                        return {input: input, input1: input1, output: sample(dist)}
-                    });
-                },
-                possibleInputs0, possibleInputs1),
-			/* shallow */ true);
-	} else {
-		return _.flatten(
-			map(function(input) {
-				var dist = distribution(input);
-				return repeat(samplesPerInput, function() {
-					return {input: input, output: sample(dist)}
-				});
-			}, 
-			possibleInputs0), 
-			/* shallow */ true);
-	}
+var makeDataInputProduct = function(distribution, samplesPerInput) {
+	var args = _.rest(arguments, 2);
+	return mapProductArgs(function() {
+		var args = arguments;
+		var dist = applyFn(distribution, args);
+		return repeat(samplesPerInput, function() {
+			var input = _.clone(args);
+			var output = sample(dist);
+			return { input : input, output: output };
+		});
+	}, args);
+}
+
+var makeDataInputTuple = function(distribution, samplesPerInput) {
+    var args = _.rest(arguments, 2);
+    return mapTupleArgs(function() {
+        var args = arguments;
+        var dist = applyFn(distribution, args);
+        return repeat(samplesPerInput, function() {
+            var input = _.clone(args);
+            var output = sample(dist);
+            return { input : input, output: output };
+        });
+    }, args);
+}
+
+var makeData = function(distribution, samplesPerInput, inputs) {
+	return _.flatten(
+		map(function(input) {
+			var dist = distribution(input);
+			return repeat(samplesPerInput, function() {
+				return {input: input, output: sample(dist)}
+			});
+		},
+		possibleInputs0),
+		/* shallow */ true);
+
 } 
 
-var makeTrainingObj = function(model, parameterPrior) {
+var makeTrainingObj = function(model, parameterPrior, batchSize) {
 	return function(data) {
 		return function() {
 			var parameters = parameterPrior();
 			var modelInstance = model(parameters);
 		
 			if (data) {
-				mapData({ data: data /*, batchSize : 100 */}, function(datum) {
-					var dist = modelInstance(datum.input, datum.input1);
+				mapData({ data: data, batchSize : batchSize}, function(datum) {
+					var dist = applyFn(modelInstance, datum.input);
 					observe(dist, datum.output);
 				});
 			}
@@ -60,9 +61,6 @@ var train = function(trainingObj, data, iterations, gradientSamples) {
 				steps: iterations,
 				estimator : { ELBO : { samples : gradientSamples }},
 			});
-
-	//mapObject(function(k,v) { display(v) }, trainingResults);
-
 	return sample(SampleGuide(trainingObj(), { params: trainingResults }));
 }
 
@@ -73,7 +71,6 @@ var makeVector = function(arr) {
 var nnparam = function (a, b) {
 	return param({ dims: [a, b], mu: 0, sigma: 0.1});
 };
-
 
 var sampleMatrixGaussian = function (dims, mean, variance, guide_mean) {
 	var length = dims[0] * dims[1]
@@ -100,25 +97,4 @@ var nnGaussianParameterPrior = function (hiddenSize, inputSize) {
 
 	return { W: [W0, W1], b: [b0, b1] };
 }
-
-//var gaussianNN = function(hiddenSize, inputSize) {
-//	var params = nnParameterPrior(hiddenSize, inputSize);
-//	var W = params.W;
-//	var b = params.b;
-//
-//	return function(input) {
-//		console.log("Input")
-//		console.log(input)
-//		var inputVector = makeVector(input);
-//		var h = T.tanh(T.add(T.dot(W[0], inputVector), b[0]));
-//		var output = T.add(T.dot(W[1], h), b[1]);
-//		
-//		//var inputAsArray = input.toFlatArray();
-//		// console.log("height: " + inputAsArray[0] + 
-//		//     ", weight: " + inputAsArray[1] +
-//		//     ", output: " + T.sumreduce(ad.value(output)));
-//		
-//		return T.sumreduce(output)
-//	};
-//};
 

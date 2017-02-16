@@ -1,72 +1,61 @@
-var makeSpatialRSA = function(rsaDist, rsaLevel, alpha, worldPrior, utterancePrior, nearThresholdPrior, nearVagueness, nearPointsNetworkParameters) {
-	var localWorldPrior = function(parameters) { return worldPrior(parameters.local); };	
+var makeSpatialRSA = function(rsaDist, rsaLevel, parameters) {
+    var constantParameters = _.clone(parameters);
 
-	return makeRSA({ worldPrior : localWorldPrior,
-                         utterancePrior : utterancePrior,
-                         parametersPrior : function(local, dist, level) {
-                                return {
-                                        alpha : alpha,
-					                    nearThreshold : (level != 0) ? nearThresholdPrior() : 1,
-                                        nearVagueness : nearVagueness,
-                                        nearFn : (nearPointsNetworkParameters) ? spaceppl.space.nearPointsNetwork : spaceppl.space.nearPoints,
-									    nearPointsNetworkParameters : nearPointsNetworkParameters,
-                                	    local : local
-				                }
-                        }
-                }, rsaDist, rsaLevel);
+	return makeRSA(
+		{
+			constant : constantParameters,
+			parametersPrior : function(observation, dist, level) {
+                var parameters = _.clone(constantParameters);
+                var nearThresholdPrior = parameters.nearThresholdPrior;
+                parameters.nearThreshold = nearThresholdPrior();
+                parameters.observation = observation;
+
+                if (parameters.nearPointsNetworkParameters)
+                	parameters.nearFn = spaceppl.space.nearPointsNetwork;
+                else
+                	parameters.nearFn = spaceppl.space.nearPoints;
+
+                return parameters;
+			}
+		},
+		rsaDist, rsaLevel);
 }
 
-var trainSpatialRSA = function(
-				rsaDist,
-				rsaLevel,
-				alpha,
-				worldPrior,
-				utterancePrior,
-				nearThresholdPrior,
-				nearVagueness,
-				iterations,
-				samplesPerInput,
-				gradientSamples,
-				nearPointsNetworkParametersPrior,
-				worldParameters) {
-	
-	var groundTruthDist = makeSpatialRSA(rsaDist, rsaLevel, alpha, worldPrior, utterancePrior, nearThresholdPrior, nearVagueness);
-	var localWorldPrior = function(parameters) { return worldPrior(parameters.local); };
+var trainSpatialRSA = function(rsaDist, rsaLevel, parameters, trainingParameters) {
+	var groundTruthDist = makeSpatialRSA(rsaDist, rsaLevel, parameters);
 
-	var networkParametersPrior = function() { 
-		var nearPointsNetworkParameters = nearPointsNetworkParametersPrior(); 
-		return { worldPrior : localWorldPrior, 
-			 utterancePrior : utterancePrior,
-			 fixedParameters : {
-				alpha : alpha, 
-				nearVagueness : nearVagueness,
-				nearFn : spaceppl.space.nearPointsNetwork,
-				nearPointsNetworkParameters : nearPointsNetworkParameters
-			 },
-		 	 parametersPrior : function(local, dist, level) {
-			 	return {
-					alpha : alpha, 
-					nearThreshold : (level != 0) ? nearThresholdPrior() : 1,
-					nearVagueness : nearVagueness, 
-					nearFn : spaceppl.space.nearPointsNetwork,
-					nearPointsNetworkParameters : nearPointsNetworkParameters,
-					local : local
-				}
+	var networkParametersPrior = function() {
+		var constantParameters = _.clone(parameters);
+        var nearPointsNetworkParametersPrior = constantParameters.nearPointsNetworkParametersPrior;
+		var nearPointsNetworkParameters = nearPointsNetworkParametersPrior();
+
+		constantParameters.nearPointsNetworkParameters = nearPointsNetworkParameters;
+        constantParameters.nearFn = spaceppl.space.nearPointsNetwork;
+
+		return {
+			 constant : constantParameters,
+		 	 parametersPrior : function(observation, dist, level) {
+				var parameters = _.clone(constantParameters);
+				var nearThresholdPrior = parameters.nearThresholdPrior;
+				parameters.nearThreshold = nearThresholdPrior();
+				parameters.observation = observation;
+				return parameters;
 			}
 		}
 	};
 
-	var utterances = constructSupport(utterancePrior);
-    var worldsAndParams = constructSupport(worldPrior, worldParameters);
-	var worlds = worldsAndParams[0];
-	var paramsByWorld = worldsAndParams[1];
+	var utterances = constructSupport(parameters.utterancePrior);
+    var worldsAndObs = constructSupport(parameters.worldPrior, trainingParameters.observations);
+	var worlds = worldsAndObs[0];
+	var obsByWorld = worldsAndObs[1];
 
 	display("Spatial RSA making training data...");
 	var trainData = rsaDist == RSA_S ?
-		makeData(groundTruthDist, samplesPerInput, worlds, paramsByWorld, false)
-		: makeData(groundTruthDist, samplesPerInput, utterances, worldParameters, true);
+		makeDataInputTuple(groundTruthDist, trainingParameters.samplesPerInput, worlds, obsByWorld)
+		: makeDataInputProduct(groundTruthDist, trainingParameters.samplesPerInput, utterances, trainingParameters.observations);
 	display("Spatial RSA training model...");
 
 	var makeRSADist = makeRSAFactory(rsaDist, rsaLevel);
-	return train(makeTrainingObj(makeRSADist, networkParametersPrior), trainData, iterations, gradientSamples);
+	return train(makeTrainingObj(makeRSADist, parameters.networkParametersPrior, trainingParameters.batchSize),
+		trainData, trainingParameters.iterations, trainingParameters.gradientSamples);
 }

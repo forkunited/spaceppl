@@ -2,6 +2,11 @@
 
 var args = parseArgs();
 
+// Initialize training parameters
+// Initialize rsa parameters
+// Construct evaluation conditions (distribution sets)
+// Construct distributions under each evaluation condition
+
 var params = {
 	rsaDist : args["rsaDist"],
 	rsaTrainingLevel : args["rsaTrainingLevel"]*1,
