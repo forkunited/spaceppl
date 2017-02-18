@@ -129,6 +129,44 @@ var getUtteranceTokenAnnotation = function(utterance, annotation, sentence, i) {
     return getUtteranceTokenAnnotations(utterance, annotations.TOKEN)[sentence][i];
 };
 
+var getUtteranceActionPairsUtterances = function(uaPairs) {
+    return _.map(uaPairs, function(uaPair) { return uaPair.utterance });
+}
+
+var getUtteranceActionPairsActions = function(uaPairs) {
+    return _.map(uaPairs, function(uaPair) { return uaPair.action });
+}
+
+var getPairedUtterancesFn = function(sender) {
+    return function(game) {
+        var pairs = getGameUtteranceActionPairs(game, sender);
+        return getUtteranceActionPairsUtterances(pairs);
+    }
+};
+
+var getPairedActionsFn = function(sender) {
+    return function (game) {
+        var pairs = getGameUtteranceActionPairs(game, sender);
+        return getUtteranceActionPairsActions(pairs);
+    }
+};
+
+var getUtteranceActionPairRound = function(uaPair) {
+    return uaPair[FIELD_ROUND_ID];
+};
+
+var getUtteranceActionPairGame = function(uaPair) {
+    return uaPair[FIELD_GAME_ID];
+};
+
+var getUtteranceActionPairUtterance = function(uaPair) {
+    return uaPair.utterance;
+};
+
+var getUtteranceActionPairAction = function(uaPair) {
+    return uaPair.action;
+};
+
 var readOneGame = function(directoryPath, fn) {
     var fileNames = fs.readdirSync(directoryPath);
     return readGame(path.join(directoryPath,  fileNames[0]), fn);
@@ -172,6 +210,14 @@ module.exports = {
     getUtteranceSentenceCount : getUtteranceSentenceCount,
     getUtteranceSentenceTokenCount : getUtteranceSentenceTokenCount,
     getUtteranceTokenAnnotation : getUtteranceTokenAnnotation,
+    getUtteranceActionPairsUtterances : getUtteranceActionPairsUtterances,
+    getUtteranceActionPairsActions : getUtteranceActionPairsActions,
+    getPairedActionsFn : getPairedActionsFn,
+    getPairedUtterancesFn : getPairedUtterancesFn,
+    getUtteranceActionPairGame : getUtteranceActionPairGame,
+    getUtteranceActionPairRound : getUtteranceActionPairRound,
+    getUtteranceActionPairUtterance : getUtteranceActionPairUtterance,
+    getUtteranceActionPairAction : getUtteranceActionPairAction,
     readGame : readGame,
     readGames : readGames,
     readOneGame : readOneGame

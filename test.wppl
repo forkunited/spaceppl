@@ -53,4 +53,29 @@ display("l");
 display(lbi);
 */
 
-spaceppl.feature.initFeatureSet("test", inputGameDirectory, utteranceFn, actionFn, featureTypes, vector);
+var utteranceFn = spaceppl.rgame.getPairedUtterancesFn(spaceppl.rgame.senders.SPEAKER);
+var actionFn = spaceppl.rgame.getPairedActionsFn(spaceppl.rgame.senders.SPEAKER)
+
+var featureTypes = [
+    {
+        name : "utok",
+        type : spaceppl.feature.types.UTTERANCE_TOKEN_ANNOTATION,
+        parameters : { annotation : spaceppl.rgame.annotations.TOKEN, minCount : 5 }
+    },
+    {
+        name : "blue",
+        type : spaceppl.feature.types.ACTION_DIMENSION_SCALAR,
+        parameters : { prefix : "blue" }
+    }
+];
+
+var vector = [/*"utok",*/ "blue"];
+var f = spaceppl.feature.initFeatureSet("test", "output/games", utteranceFn, actionFn, featureTypes, vector);
+spaceppl.feature.saveFeatureSet(f, "output/features/");
+var fLoad = spaceppl.feature.loadFeatureSet("output/features/");
+
+//display(fLoad.features.utok.vocabulary);
+
+var F = spaceppl.feature.computeFeatureSet(fLoad, "output/games", spaceppl.rgame.getGameUtteranceActionPairs);
+
+display(F);
