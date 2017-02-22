@@ -27,9 +27,16 @@ xlabel = sys.argv[2]
 ylabel = sys.argv[3]
 x = sys.argv[4]
 y = sys.argv[5]
-where = sys.argv[6].split(",")
-where_values = sys.argv[7].split(",")
-groupby = sys.argv[8].split(",")
+
+where = None
+where_values = None
+if len(sys.argv) > 6:
+    where = sys.argv[6].split(",")
+    where_values = sys.argv[7].split(",")
+
+groupby = None
+if len(sys.argv) > 8:
+    groupby = sys.argv[8].split(",")
 
 def read_tsv_file(file_path):
     f = open(file_path, 'rt')
@@ -44,6 +51,9 @@ def read_tsv_file(file_path):
 
 
 def row_match(row, where, where_values):
+    if where is None:
+        return True
+
     for i in range(len(where)):
         if row[where[i]] != where_values[i]:
             return False
@@ -57,10 +67,13 @@ def aggregate(rows, x, y, where, where_values, groupby):
         if not row_match(row, where, where_values):
             continue
         cur_agg = agg
-        for key in groupby:
-            if row[key] not in cur_agg:
-                cur_agg[row[key]] = dict()
-            cur_agg = cur_agg[row[key]]
+
+        if groupby is not None:
+            for key in groupby:
+                if row[key] not in cur_agg:
+                    cur_agg[row[key]] = dict()
+                cur_agg = cur_agg[row[key]]
+
         x_value = row[x]
         y_value = row[y]
         if x_value not in cur_agg:
@@ -93,7 +106,10 @@ def compute_statistics(agg, groupby):
     overall_statistics["y_max"] = 1.0
     overall_statistics["x_max"] = 0
     statistics = dict()
-    return compute_statistics_helper(agg, len(groupby) + 1, [], statistics, overall_statistics)
+    depth = 1
+    if groupby is not None:
+        depth = len(groupby) + 1
+    return compute_statistics_helper(agg, depth, [], statistics, overall_statistics)
 
 
 def make_latex_plot_helper(statistics, groupby, depth, keys, s):
@@ -108,8 +124,9 @@ def make_latex_plot_helper(statistics, groupby, depth, keys, s):
 
         plot_str = plot_str + "};\n"
         plot_str = plot_str + "\\addlegendentry{\\tiny{"
-        for i in range(len(groupby)):
-            plot_str = plot_str + groupby[i] + "=" + keys[i] + " "
+        if groupby is not None:
+            for i in range(len(groupby)):
+                plot_str = plot_str + groupby[i] + "=" + keys[i] + " "
 	plot_str = plot_str.strip()
         plot_str = plot_str + "}};\n\n"
 
@@ -136,7 +153,11 @@ def make_latex_plot(statistics, overall_statistics, xlabel, ylabel, groupby):
            "]\n"
     )
 
-    s = s + make_latex_plot_helper(statistics, groupby, len(groupby), [], "")
+    depth = 0
+    if groupby is not None:
+        depth = len(groupby)
+
+    s = s + make_latex_plot_helper(statistics, groupby, depth, [], "")
 
     s = s + ("\\end{axis}\n"
                  "\\end{tikzpicture}\n"
