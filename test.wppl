@@ -56,6 +56,7 @@ display(lbi);
 // Run with webppl test.wppl --require webppl-nn --require .
 
 var args = parseArgs();
+var gamesDir = args["gamesDir"];
 
 var utteranceFn = spaceppl.rgame.getPairedUtterancesFn(spaceppl.rgame.senders.SPEAKER);
 var actionFn = spaceppl.rgame.getPairedActionsFn(spaceppl.rgame.senders.SPEAKER)
@@ -88,11 +89,11 @@ var inputFeatureTypes = [
 ];
 
 var inputVector = ["utok", "boxX", "boxY", "boxW", "boxH", "boxC"];
-var inputf = spaceppl.feature.initFeatureSet("testInput", "output/games/1", utteranceFn, actionFn, inputFeatureTypes, inputVector);
+var inputf = spaceppl.feature.initFeatureSet("testInput", gamesDir, utteranceFn, actionFn, inputFeatureTypes, inputVector);
 //spaceppl.feature.saveFeatureSet(f, "output/features/");
 //var fLoad = spaceppl.feature.loadFeatureSet("output/features/");
 //display(fLoad.features.utok.vocabulary);
-var inputF = spaceppl.feature.computeFeatureSet(inputf, "output/games/1", spaceppl.rgame.getGameUtteranceActionPairs);
+var inputF = spaceppl.feature.computeFeatureSet(inputf, gamesDir, spaceppl.rgame.getGameUtteranceActionPairs);
 
 var outputFeatureTypes = [
     {
@@ -102,8 +103,8 @@ var outputFeatureTypes = [
 ];
 
 var outputVector = ["mouse"];
-var outputf = spaceppl.feature.initFeatureSet("testOutput", "output/games/1", utteranceFn, actionFn, outputFeatureTypes, outputVector);
-var outputF = spaceppl.feature.computeFeatureSet(outputf, "output/games/1", spaceppl.rgame.getGameUtteranceActionPairs);
+var outputf = spaceppl.feature.initFeatureSet("testOutput", gamesDir, utteranceFn, actionFn, outputFeatureTypes, outputVector);
+var outputF = spaceppl.feature.computeFeatureSet(outputf, gamesDir, spaceppl.rgame.getGameUtteranceActionPairs);
 
 var D = makeDataFromFeatureMatrices(inputF, outputF, { inputSequence : true, outputSequence : false });
 
