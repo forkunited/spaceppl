@@ -32,6 +32,8 @@ def process_messy_tsv_file(file_path):
     try:
         keys = []
         for line in f:
+            if line.startswith("undefined"):
+                continue
             if tsv_started:
                 cur_record = dict()
                 values = line.split("\t")
