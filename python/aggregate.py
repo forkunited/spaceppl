@@ -9,6 +9,9 @@ from collections import OrderedDict
 input_file_dir = sys.argv[1]
 input_file_type = sys.argv[2]
 output_file_path = sys.argv[3]
+tsv_line_start = None
+if input_file_type == "MESSY_TSV":
+    tsv_line_start = sys.argv[4]
 
 def process_tsv_file(file_path):
     f = open(file_path, 'rt')
@@ -21,6 +24,26 @@ def process_tsv_file(file_path):
         f.close()
     return rows
 
+def process_messy_tsv_file(file_path):
+    records = []
+    tsv_started = False
+    f = open(file_path, 'rt')
+
+    try:
+        keys = []
+        for line in f:
+            if tsv_started:
+                cur_record = dict()
+                values = line.split("\t")
+                for i in range(len(values)):
+                    cur_record[keys[i].strip()] = values[i].strip()
+                records.append(cur_record)
+            elif line.startswith(tsv_line_start):
+                tsv_started = true
+                keys = line.split("\t")
+    finally:
+        f.close()
+    return records
 
 def process_messy_file(file_path):
     record = dict()
@@ -77,6 +100,8 @@ def aggregate_directory(file_dir, file_type):
     for file in files:
         if file_type == 'MESSY':
             rows.extend(process_messy_file(join(file_dir, file)))
+        elif file_type == 'MESSY_TSV':
+            rows.extend(process_messy_tsv_file(join(file_dir,file)))
         else:
             rows.extend(process_tsv_file(join(file_dir, file)))
     return rows
