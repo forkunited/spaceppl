@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "webppl": {
-    "wppl" : []
+    "wppl" : ["nn.wppl", "learn.wppl", "util.wppl"]
   },
   "author": "Bill McDowell",
   "dependencies": {

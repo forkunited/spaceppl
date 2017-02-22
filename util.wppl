@@ -1,5 +1,5 @@
 var applyFn = function(fn, args) {
-    if (arguments.length <= 1 || arguments.length >=5) {
+    if (args.length <= 1 || args.length >=5) {
         display("applyFn error: Requires at least 1 but no more than 4 arguments")
         return undefined;
     }
@@ -111,7 +111,7 @@ var parseArgs = function() {
 		return keyValue != undefined;
 	}, keyValues);
 
-	return _.object(keyValuesFiltered);
+	return spaceppl.util.makeObject(keyValuesFiltered);
 }
 
 /*

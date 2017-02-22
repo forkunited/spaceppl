@@ -1,5 +1,6 @@
 var _ = require("underscore");
 var dist = require("./dist");
+var Tensor = require("adnn/tensor");
 
 var _meanMeasure = function(p_hats, ps, measureFn) {
     var pp_hats = _.zip(ps, p_hats);
@@ -69,10 +70,24 @@ var MAUC = function(p_hats, ps) {
     return (2.0 / (c * (c - 1.0))) * sumA;
 }
 
+var sampleMSE = function(Y_hat, Y) {
+	var total = 0.0;
+	for (var i = 0; i < Y.length; i++) {
+        var y_i = Y[i];
+        var y_hat_i = Y_hat[i];
+		var diff_i = T.sub(y_i, y_hat_i);
+		var value = T.sumreduce(T.dot(diff_i, T.transpose(diff_i)));
+		total += value;
+	}
+
+	return total/Y.length;
+}
+
 module.exports = {
 	accuracy : accuracy,
 	KL : KL,
 	KTD : KTD,
 	WKTD : WKTD,
-    MAUC : MAUC
+    MAUC : MAUC,
+	sampleMSE : sampleMSE
 }

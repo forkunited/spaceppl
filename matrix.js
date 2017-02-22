@@ -1,4 +1,5 @@
 const _ = require('underscore');
+const Tensor = require("adnn/tensor");
 
 var vectorInit = function(length) {
     return { length : length, vec : {}};
@@ -80,6 +81,19 @@ var matrixRowProductCat = function(M1, M2) {
     return M;
 };
 
+var matrixToRowTensorList = function(M) {
+    var L = [];
+    for (var i = 0; i < M.m; i++) {
+        var t = new Tensor([M.n, 1])
+        for (var key in M.mat[i].vec) {
+            t.data[parseInt(key)] = M.mat[i].vec[key];
+        }
+
+        L.push(t);
+    }
+    return L;
+}
+
 module.exports = {
     vectorInit: vectorInit,
     vectorSet : vectorSet,
@@ -91,5 +105,6 @@ module.exports = {
     matrixGetDimension : matrixGetDimension,
     matrixGetRowVector : matrixGetRowVector,
     matrixAddRowVector : matrixAddRowVector,
-    matrixRowProductCat : matrixRowProductCat
+    matrixRowProductCat : matrixRowProductCat,
+    matrixToRowTensorList : matrixToRowTensorList
 };

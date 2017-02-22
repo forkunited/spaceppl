@@ -70,12 +70,17 @@ var objectToString = function(obj, valueToStringFn) {
     	}, "");
 }
 
+var makeObject = function(l) {
+	return _.object(l);
+}
+
 module.exports = {
 	areDisjoint : areDisjoint,
 	getDimension : getDimension,
 	round : round,
 	arraySwap : arraySwap,
 	objectToString : objectToString,
-	objectListToTSVString : objectListToTSVString
+	objectListToTSVString : objectListToTSVString,
+	makeObject : makeObject
 }
 
