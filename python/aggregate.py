@@ -39,7 +39,7 @@ def process_messy_tsv_file(file_path):
                     cur_record[keys[i].strip()] = values[i].strip()
                 records.append(cur_record)
             elif line.startswith(tsv_line_start):
-                tsv_started = true
+                tsv_started = True
                 keys = line.split("\t")
     finally:
         f.close()
