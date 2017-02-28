@@ -53,7 +53,8 @@ display("l");
 display(lbi);
 */
 
-// Run with webppl test.wppl --require webppl-nn --require .
+// Run with
+// webppl test.wppl --require webppl-nn --require . --gamesDir output/games/1 --iterations 2 --random-seed 2
 
 var args = parseArgs();
 var gamesDir = args["gamesDir"];
@@ -139,9 +140,9 @@ var results = train(obj, D_train, iterations, gradientSamples);
 
 var trainedModel = results[0];
 
-var Y_hat_train = map(function(d) { return sample(trainedModel(d.input)); }, D_train);
+var Y_hat_train = map(function(d) { return trainedModel(d.input).params.mu }, D_train);
 var Y_train = map(function(d) { return d.output; }, D_train);
-var Y_hat_test = map(function(d) { return sample(trainedModel(d.input)); }, D_test);
+var Y_hat_test = map(function(d) { return trainedModel(d.input).params.mu }, D_test);
 var Y_test = map(function(d) { return d.output; }, D_test);
 
 var trainMSE = spaceppl.evaluation.sampleMSE(Y_hat_train, Y_train);
