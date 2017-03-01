@@ -2,12 +2,13 @@
 // webppl test/wppl/game/train_Ld.wppl --require gameppl --require webppl-nn --require . --random-seed 1 --iterations 100
 
 var args = parseArgs();
+var rootDir = args["rootDir"];
 var iterations = args["iterations"]*1;
 var batchSize = 100;
 var gradientSamples = 1;
 
-var inputF = gameppl.feature.loadFeatureMatrix("examples/features/mat/Ld_in");
-var outputF = gameppl.feature.loadFeatureMatrix("examples/features/mat/Ld_out");
+var inputF = gameppl.feature.loadFeatureMatrix(rootDir + "/examples/features/mat/Ld_in");
+var outputF = gameppl.feature.loadFeatureMatrix(rootDir + "examples/features/mat/Ld_out");
 
 var D = makeDataFromFeatureMatrices(inputF, outputF, { inputSequence : true, outputSequence : false });
 
