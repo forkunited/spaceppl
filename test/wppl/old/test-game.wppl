@@ -95,8 +95,3 @@ var testMSE = gameppl.evaluation.sampleMSE(Y_hat_test, Y_test);
 
 display("iterations\ttrainMSE\ttestMSE");
 display(iterations + "\t" + trainMSE + "\t" + testMSE);
-
-/*
-var M = MultivariateGaussian({ mu : Vector([1.0, 1.0]), cov : Matrix([[1.0,0.0],[0.0,1.0]])});
-M.score(Vector([10.0,1.0]))
-*/

@@ -12,8 +12,7 @@
   "author": "Bill McDowell",
   "dependencies": {
     "adnn": "^1.1.6",
-    "underscore": "^1.8.3",
-    "gameppl" : "^0.0.1"
+    "underscore": "^1.8.3"
   },
   "repository": {
     "type": "git",
